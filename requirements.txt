@@ -1,0 +1,27 @@
+# ── Core ──────────────────────────────────────────────
+requests==2.31.0
+python-dotenv==1.0.0
+tqdm==4.66.1
+httpx>=0.27.0
+
+# ── Data / Parsing ─────────────────────────────────────
+biopython==1.83
+lxml==5.1.0
+pandas==2.2.0
+
+# ── Embeddings & Vector Store ──────────────────────────
+chromadb==0.4.22
+sentence-transformers==2.6.1
+
+# ── LangChain (RAG orchestration) ─────────────────────
+langchain==0.1.9
+langchain-community==0.0.25
+groq>=1.1.1
+
+# ── API Backend ────────────────────────────────────────
+fastapi==0.110.0
+uvicorn==0.27.1
+pydantic==2.6.1
+
+# ── Testing ────────────────────────────────────────────
+pytest==8.0.2

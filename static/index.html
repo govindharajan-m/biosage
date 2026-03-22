@@ -1,0 +1,2170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>BioSage — Biomedical Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#09090B;--surface:#111113;--surface2:#1C1C1F;--surface3:#27272A;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#F4F4F5;--text2:#A1A1AA;--text3:#52525B;
+  --accent:#3B82F6;--accent-bg:rgba(59,130,246,0.08);--accent-border:rgba(59,130,246,0.25);
+  --green:#22C55E;--green-bg:rgba(34,197,94,0.08);
+  --red:#EF4444;--red-bg:rgba(239,68,68,0.08);
+  --orange:#F97316;--orange-bg:rgba(249,115,22,0.08);
+  --purple:#A855F7;--purple-bg:rgba(168,85,247,0.08);
+  --yellow:#EAB308;--yellow-bg:rgba(234,179,8,0.08);
+  --radius:6px;--radius-lg:10px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+button{cursor:pointer;border:none;background:none;font-family:inherit;font-size:inherit;color:inherit}
+input,textarea{font-family:inherit;font-size:inherit}
+code,pre{font-family:'JetBrains Mono',monospace}
+
+/* ── Layout ────────────────────────────────────────────────────────────── */
+.layout{display:grid;grid-template-columns:220px 1fr 340px;height:100vh;overflow:hidden}
+.sidebar{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.main{display:flex;flex-direction:column;overflow:hidden}
+.evidence-panel{border-left:1px solid var(--border);overflow-y:auto;background:var(--surface);display:flex;flex-direction:column}
+
+/* ── Sidebar ───────────────────────────────────────────────────────────── */
+.sidebar-brand{padding:18px 16px 12px;border-bottom:1px solid var(--border)}
+.brand-name{font-size:15px;font-weight:600;letter-spacing:-0.3px}
+.brand-sub{font-size:11px;color:var(--text3);margin-top:1px}
+.sidebar-nav{padding:10px 8px;border-bottom:1px solid var(--border)}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--radius);color:var(--text2);font-size:13px;cursor:pointer;transition:all 0.12s;user-select:none}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-border)}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:0.6;flex-shrink:0}
+.sidebar-recent{padding:10px 8px;flex:1;overflow-y:auto;min-height:0}
+.sidebar-label{font-size:10px;color:var(--text3);font-weight:500;letter-spacing:0.6px;text-transform:uppercase;padding:0 8px;margin-bottom:6px}
+.recent-item{display:block;padding:5px 8px;border-radius:var(--radius);color:var(--text2);font-size:12px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:background 0.1s}
+.recent-item:hover{background:var(--surface2);color:var(--text)}
+.recent-type{display:inline-block;font-size:9px;padding:1px 4px;border-radius:2px;background:var(--surface3);color:var(--text3);margin-right:4px;text-transform:uppercase;letter-spacing:0.3px}
+.sidebar-footer{padding:10px 16px;border-top:1px solid var(--border)}
+.footer-text{font-size:11px;color:var(--text3)}
+
+/* ── Main area ─────────────────────────────────────────────────────────── */
+.main-inner{flex:1;overflow-y:auto;padding:40px 48px}
+
+/* ── Home ──────────────────────────────────────────────────────────────── */
+.home-wrap{min-height:100%;display:flex;flex-direction:column;justify-content:center;max-width:640px;margin:0 auto;padding:60px 0}
+.home-title{font-size:28px;font-weight:600;letter-spacing:-0.5px;margin-bottom:4px}
+.home-sub{font-size:15px;color:var(--text2);margin-bottom:32px;font-weight:300;line-height:1.5}
+.search-wrap{position:relative}
+.search-input{width:100%;padding:14px 52px 14px 16px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);color:var(--text);font-size:15px;outline:none;transition:border-color 0.15s}
+.search-input::placeholder{color:var(--text3)}
+.search-input:focus{border-color:var(--accent-border)}
+.search-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:6px 14px;background:var(--accent);color:#fff;border-radius:var(--radius);font-size:13px;font-weight:500;transition:background 0.12s}
+.search-btn:hover{background:#2563EB}
+.search-btn:disabled{opacity:0.5;cursor:not-allowed}
+
+/* Autocomplete dropdown */
+.autocomplete-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);z-index:100;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.4)}
+.ac-item{padding:10px 14px;font-size:13px;color:var(--text2);cursor:pointer;transition:background 0.1s;display:flex;align-items:center;gap:8px}
+.ac-item:hover,.ac-item.focused{background:var(--surface2);color:var(--text)}
+.ac-icon{font-size:11px;color:var(--text3);flex-shrink:0;width:12px;text-align:center}
+
+.example-queries{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.example-chip{padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;color:var(--text2);font-size:12px;cursor:pointer;transition:all 0.12s}
+.example-chip:hover{border-color:var(--border2);color:var(--text);background:var(--surface3)}
+
+.home-sources{margin-top:48px}
+.sources-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px}
+.sources-grid{display:flex;flex-wrap:wrap;gap:6px}
+.source-badge{padding:3px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;font-size:11px;color:var(--text3)}
+
+/* ── Chat page ─────────────────────────────────────────────────────────── */
+.chat-page{display:flex;flex-direction:column;height:100%}
+.chat-thread{flex:1;overflow-y:auto;padding:24px 0 16px}
+.chat-bar{border-top:1px solid var(--border);padding:14px 0 0;width:100%}
+.chat-row{display:flex;gap:8px;align-items:flex-end;width:100%}
+.chat-inp{width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);color:var(--text);font-size:14px;outline:none;resize:none;min-height:42px;max-height:112px;line-height:1.5;transition:border-color 0.12s;display:block}
+.chat-inp::placeholder{color:var(--text3)}
+.chat-inp:focus{border-color:var(--accent-border)}
+.chat-send{padding:10px 18px;background:var(--accent);color:#fff;border-radius:var(--radius-lg);font-size:13px;font-weight:500;flex-shrink:0;transition:background 0.12s}
+.chat-send:hover:not(:disabled){background:#2563EB}
+.chat-send:disabled{opacity:0.45;cursor:not-allowed}
+.chat-hint{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.chat-hint-text{font-size:11px;color:var(--text3)}
+.new-chat-btn{font-size:11px;color:var(--text3);border:1px solid var(--border);border-radius:var(--radius);padding:3px 9px;transition:all 0.12s}
+.new-chat-btn:hover{border-color:var(--border2);color:var(--text2)}
+
+/* Messages */
+.msg{margin-bottom:32px}
+.msg-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.msg-role{font-size:11px;font-weight:600;letter-spacing:0.4px;text-transform:uppercase}
+.msg-role.user{color:var(--text3)}
+.msg-role.assistant{color:var(--accent)}
+.msg-type-tag{font-size:10px;padding:2px 6px;border-radius:3px;background:var(--surface2);color:var(--text3);text-transform:uppercase;letter-spacing:0.4px}
+.msg-user-bubble{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:11px 15px;font-size:14px;color:var(--text);line-height:1.6;display:inline-block;max-width:82%}
+
+/* Structured sections within assistant message */
+.msg-sections{}
+.report-section{margin-bottom:22px;padding-bottom:22px;border-bottom:1px solid var(--border)}
+.report-section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.report-section-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);margin-bottom:8px}
+.report-section-body{font-size:14px;color:var(--text);line-height:1.85}
+.report-section-body p{margin-bottom:10px}
+.report-section-body p:last-child{margin-bottom:0}
+
+/* Section skeleton loader */
+.skeleton-section{margin-bottom:22px;padding-bottom:22px;border-bottom:1px solid var(--border)}
+.skeleton-title{height:9px;background:var(--surface3);border-radius:3px;width:100px;margin-bottom:10px;animation:shimmer 1.4s ease-in-out infinite}
+.skeleton-line{height:10px;background:var(--surface3);border-radius:3px;margin-bottom:6px;animation:shimmer 1.4s ease-in-out infinite}
+.skeleton-line.w80{width:80%}
+.skeleton-line.w65{width:65%}
+.skeleton-line.w90{width:90%}
+@keyframes shimmer{0%{opacity:0.4}50%{opacity:0.8}100%{opacity:0.4}}
+
+/* Typing cursor */
+.typing-cursor{display:inline-block;width:2px;height:14px;background:var(--accent);margin-left:1px;vertical-align:middle;animation:blink 0.9s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* Prose answer (non-disease) */
+.msg-answer{font-size:14px;color:var(--text);line-height:1.85}
+.msg-answer p{margin-bottom:12px}
+.msg-answer p:last-child{margin-bottom:0}
+
+/* Inline citations */
+.cite-ref{display:inline-block;font-size:10px;font-weight:600;color:var(--accent);background:var(--accent-bg);border:1px solid var(--accent-border);border-radius:3px;padding:0 4px;margin:0 1px;vertical-align:super;line-height:1.4;cursor:pointer}
+.cite-ref:hover{background:var(--accent);color:#fff}
+/* ── Markdown tables ── */
+.tbl-wrap{margin:12px 0;border:1px solid var(--border2);border-radius:var(--radius-lg);overflow:hidden}
+.tbl-toolbar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-bottom:1px solid var(--border)}
+.tbl-label{font-size:11px;color:var(--text3)}
+.tbl-export-btn{font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-bg);border:1px solid var(--accent-border);border-radius:var(--radius);padding:4px 10px;cursor:pointer;transition:background 0.12s}
+.tbl-export-btn:hover{background:var(--accent);color:#fff}
+.tbl-scroll{overflow-x:auto;max-width:100%}
+.md-table{width:100%;border-collapse:collapse;font-size:13px}
+.md-table th{background:var(--surface3);color:var(--text2);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.4px;padding:8px 12px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--border2)}
+.md-table td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:top;line-height:1.5}
+.md-table tr:last-child td{border-bottom:none}
+.md-table tr:hover td{background:var(--surface2)}
+
+/* Follow-up chips */
+/* ── Disease images gallery ── */
+.disease-imgs-block{margin-bottom:16px}
+.disease-imgs-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.disease-img-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;flex:0 0 auto;max-width:160px;transition:border-color 0.15s}
+.disease-img-card.primary{max-width:210px}
+.disease-img-card:hover{border-color:var(--accent-border)}
+.disease-img-card img{width:100%;display:block;object-fit:cover;max-height:180px}
+.disease-img-card.primary img{max-height:220px}
+.disease-img-cap{font-size:10px;color:var(--text3);line-height:1.4;padding:6px 8px}
+.wiki-img-link{color:var(--accent);text-decoration:none}
+.wiki-img-link:hover{text-decoration:underline}
+@media(max-width:600px){.disease-imgs-row{flex-direction:column}.disease-img-card,.disease-img-card.primary{max-width:100%}}
+/* ── Charts ── */
+.charts-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:16px}
+.chart-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 16px;flex:1;min-width:240px}
+.chart-card-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);margin-bottom:10px}
+/* ── Immediate Response (always last) ── */
+.immediate-response-section{margin-top:24px;padding:14px 16px;background:var(--green-bg,rgba(16,185,129,0.07));border:1px solid rgba(16,185,129,0.22);border-radius:var(--radius)}
+.ir-list{margin:6px 0 0 0;padding:0 0 0 14px;list-style:none}
+.ir-list li{position:relative;padding:4px 0 4px 18px;font-size:13px;color:var(--text2);line-height:1.55}
+.ir-list li::before{content:"•";position:absolute;left:0;color:var(--green,#10b981);font-weight:700}
+.ir-list .ir-disclaimer{margin-top:10px;padding-top:10px;border-top:1px solid rgba(16,185,129,0.18);font-size:11.5px;color:var(--text3);font-style:italic}
+.ir-list .ir-disclaimer::before{content:""}
+.followup-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.followup-chip{padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text2);cursor:pointer;transition:all 0.12s;text-align:left}
+.followup-chip:hover{border-color:var(--accent-border);color:var(--text);background:var(--accent-bg)}
+
+/* Evidence data tables inside messages */
+.msg-data{margin-top:20px;padding-top:18px;border-top:1px solid var(--border)}
+.msg-data-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);margin-bottom:10px}
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{text-align:left;font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px;padding:5px 8px;border-bottom:1px solid var(--border)}
+.data-table td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text2)}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--surface2)}
+.td-p{color:var(--text);font-weight:500}
+.td-m{font-family:'JetBrains Mono',monospace;font-size:11px}
+
+/* Significance badges */
+.sig{display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px;font-weight:500}
+.sig-P{background:var(--red-bg);color:var(--red)}
+.sig-LP{background:var(--orange-bg);color:var(--orange)}
+.sig-VUS{background:var(--yellow-bg);color:var(--yellow)}
+.sig-LB,.sig-B{background:var(--green-bg);color:var(--green)}
+.sig-U{background:var(--surface3);color:var(--text3)}
+
+/* Score bar */
+.score-wrap{display:flex;align-items:center;gap:6px}
+.score-bar{height:3px;background:var(--surface3);border-radius:2px;flex:1;overflow:hidden}
+.score-fill{height:100%;background:var(--accent);border-radius:2px}
+.score-val{font-size:10px;color:var(--text3);min-width:28px}
+
+/* Drug phase */
+.phase{display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px}
+.phase-4{background:var(--green-bg);color:var(--green)}
+.phase-3{background:var(--accent-bg);color:var(--accent)}
+.phase-2{background:var(--purple-bg);color:var(--purple)}
+.phase-1{background:var(--yellow-bg);color:var(--yellow)}
+.phase-0{background:var(--surface3);color:var(--text3)}
+
+/* ── Evidence panel ────────────────────────────────────────────────────── */
+.ep-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ep-title{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:0.6px;text-transform:uppercase}
+.ep-count{font-size:10px;color:var(--text3)}
+.ep-body{flex:1;overflow-y:auto;min-height:0}
+.ep-empty{padding:24px 16px;color:var(--text3);font-size:13px;text-align:center}
+.ep-show-more{padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0}
+.ep-show-more-btn{font-size:12px;color:var(--accent);cursor:pointer;background:none;border:none;padding:0;display:block;width:100%;text-align:center}
+.ep-show-more-btn:hover{color:var(--text)}
+
+.cit-item{padding:11px 16px;border-bottom:1px solid var(--border);transition:background 0.1s;cursor:default}
+.cit-item:hover{background:var(--surface2)}
+.cit-item:last-child{border-bottom:none}
+.cit-item.hi{background:var(--accent-bg);border-left:2px solid var(--accent)}
+.cit-n{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:3px;font-size:10px;font-weight:600;flex-shrink:0}
+.cit-db{font-size:10px;font-weight:600;margin-bottom:2px}
+.cit-label{font-size:12px;color:var(--text2);line-height:1.4}
+.cit-url{font-size:10px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── Variant page ──────────────────────────────────────────────────────── */
+.variant-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.vcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px}
+.vcard-source{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:8px}
+.vcard-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;font-size:12px;gap:8px}
+.vcard-row .key{color:var(--text3);flex-shrink:0}
+.vcard-row .val{color:var(--text);font-weight:500;text-align:right;overflow:hidden;text-overflow:ellipsis}
+.acmg-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:18px}
+.acmg-class{font-size:18px;font-weight:600;margin-bottom:4px}
+.acmg-class.P{color:var(--red)}.acmg-class.LP{color:var(--orange)}
+.acmg-class.VUS{color:var(--yellow)}.acmg-class.LB,.acmg-class.B{color:var(--green)}
+.acmg-criteria{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.acmg-c{padding:2px 7px;border-radius:3px;font-size:10px;font-family:'JetBrains Mono',monospace}
+.acmg-pvs{background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,0.2)}
+.acmg-ps{background:var(--orange-bg);color:var(--orange);border:1px solid rgba(249,115,22,0.2)}
+.acmg-pm{background:var(--yellow-bg);color:var(--yellow);border:1px solid rgba(234,179,8,0.2)}
+.acmg-pp{background:var(--purple-bg);color:var(--purple);border:1px solid rgba(168,85,247,0.2)}
+.acmg-ba,.acmg-bs{background:var(--green-bg);color:var(--green);border:1px solid rgba(34,197,94,0.2)}
+.acmg-bp{background:var(--surface3);color:var(--text2);border:1px solid var(--border2)}
+
+/* ── VCF ───────────────────────────────────────────────────────────────── */
+.risk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px}
+.risk-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;text-align:center}
+.rnum{font-size:26px;font-weight:600;line-height:1}
+.rlabel{font-size:10px;color:var(--text3);margin-top:4px;text-transform:uppercase;letter-spacing:0.4px}
+.risk-card.r-danger .rnum{color:var(--red)}
+.risk-card.r-warn .rnum{color:var(--orange)}
+.risk-card.r-neutral .rnum{color:var(--yellow)}
+.risk-card.r-ok .rnum{color:var(--green)}
+
+/* ── Utility ───────────────────────────────────────────────────────────── */
+.page-header{margin-bottom:24px}
+.page-title{font-size:20px;font-weight:600;letter-spacing:-0.3px}
+.page-meta{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.page-search{display:flex;gap:8px;margin-bottom:24px}
+.page-search input{flex:1;padding:10px 14px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);outline:none}
+.page-search input:focus{border-color:var(--accent-border)}
+.page-search input::placeholder{color:var(--text3)}
+.page-search button{padding:10px 18px;background:var(--accent);color:#fff;border-radius:var(--radius);font-weight:500}
+.page-search button:hover{background:#2563EB}
+.section{margin-bottom:32px}
+.section-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.pheno-tags{display:flex;flex-wrap:wrap;gap:6px}
+.pheno-tag{padding:3px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;font-size:12px;color:var(--text2)}
+.source-tag{padding:2px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;font-size:10px;color:var(--text2)}
+.action-btn{padding:5px 11px;border:1px solid var(--border2);border-radius:var(--radius);font-size:11px;color:var(--text2);transition:all 0.12s}
+.action-btn:hover{border-color:var(--accent-border);color:var(--accent)}
+.inline-loader{display:flex;align-items:center;gap:8px;padding:16px 0;color:var(--text3);font-size:13px}
+.dots{display:flex;gap:4px}
+.dot{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse 1.2s ease-in-out infinite}
+.dot:nth-child(2){animation-delay:0.2s}
+.dot:nth-child(3){animation-delay:0.4s}
+@keyframes pulse{0%,80%,100%{transform:scale(0.6);opacity:0.35}40%{transform:scale(1);opacity:1}}
+.upload-area{border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:40px;text-align:center;cursor:pointer;transition:all 0.12s;margin-bottom:20px}
+.upload-area:hover,.upload-area.drag{border-color:var(--accent-border);background:var(--accent-bg)}
+.upload-label{font-size:14px;color:var(--text2);margin-bottom:4px}
+.upload-hint{font-size:12px;color:var(--text3)}
+.upload-fn{font-size:12px;color:var(--accent);margin-top:8px;font-family:'JetBrains Mono',monospace}
+.analyses-list{display:flex;flex-direction:column;gap:1px}
+.an-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.an-row:hover .an-name{color:var(--accent)}
+.an-type{width:58px;text-align:center;padding:2px 0;background:var(--surface2);border-radius:3px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--text3);flex-shrink:0}
+.an-name{font-size:13px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.an-date{font-size:10px;color:var(--text3);flex-shrink:0}
+.an-del{padding:3px 7px;border-radius:3px;font-size:10px;color:var(--text3);opacity:0}
+.an-row:hover .an-del{opacity:1}
+.an-del:hover{background:var(--red-bg);color:var(--red)}
+.toast{position:fixed;bottom:20px;right:20px;padding:9px 14px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-lg);font-size:13px;color:var(--text);z-index:1000;opacity:0;transform:translateY(6px);transition:all 0.18s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.cached-badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;background:var(--green-bg);color:var(--green);margin-left:8px}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border2)}
+
+/* ── Mobile hamburger ──────────────────────────────────────────────────── */
+.hamburger{display:none;flex-direction:column;justify-content:center;gap:4px;width:36px;height:36px;padding:7px;cursor:pointer;border-radius:var(--radius);transition:background 0.12s;position:fixed;top:12px;left:12px;z-index:200;background:var(--surface);border:1px solid var(--border)}
+.hamburger:hover{background:var(--surface2)}
+.hamburger span{width:16px;height:2px;background:var(--text2);border-radius:1px;display:block;transition:all 0.2s}
+.hamburger.open span:nth-child(1){transform:translateY(6px) rotate(45deg)}
+.hamburger.open span:nth-child(2){opacity:0}
+.hamburger.open span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:149;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+.sidebar-overlay.show{display:block}
+
+/* ── Progress steps ─────────────────────────────────────────────────────── */
+.progress-steps{display:flex;align-items:center;gap:0;margin:10px 0 2px;flex-wrap:wrap}
+.ps{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);padding:3px 0}
+.ps.done{color:var(--green)}.ps.active{color:var(--accent)}
+.ps-dot{width:6px;height:6px;border-radius:50%;background:var(--surface3);flex-shrink:0;transition:background 0.2s}
+.ps.done .ps-dot{background:var(--green)}.ps.active .ps-dot{background:var(--accent);animation:pulse 1.2s ease-in-out infinite}
+.ps-sep{font-size:10px;color:var(--surface3);margin:0 7px}
+
+/* ── Message action buttons ─────────────────────────────────────────────── */
+.msg-actions{display:flex;gap:4px;margin-left:auto;opacity:0;transition:opacity 0.15s}
+.msg:hover .msg-actions{opacity:1}
+.msg-act-btn{padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:10px;color:var(--text3);transition:all 0.12s;white-space:nowrap}
+.msg-act-btn:hover{border-color:var(--border2);color:var(--text);background:var(--surface2)}
+.msg-act-btn.copied{color:var(--green);border-color:rgba(34,197,94,0.4);opacity:1!important}
+
+/* ── Keyboard shortcut hint ─────────────────────────────────────────────── */
+.kbd{display:inline-block;padding:1px 5px;background:var(--surface2);border:1px solid var(--border2);border-radius:3px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text3)}
+
+@media(max-width:1200px){.layout{grid-template-columns:200px 1fr}.evidence-panel{display:none}}
+@media(max-width:800px){
+  .hamburger{display:flex}
+  .sidebar{position:fixed;left:-230px;top:0;bottom:0;width:220px;z-index:150;background:var(--surface);transition:left 0.22s cubic-bezier(0.4,0,0.2,1);border-right:1px solid var(--border2)}
+  .sidebar.open{left:0;box-shadow:4px 0 24px rgba(0,0,0,0.4)}
+  .layout{grid-template-columns:1fr}
+  /* Chat page: let thread scroll, bar stays fixed at bottom */
+  .main-inner{padding:0;overflow:hidden}
+  .chat-thread{padding:16px 14px 8px}
+  .chat-bar{padding:10px 14px 18px;background:var(--bg);border-top:1px solid var(--border2);position:sticky;bottom:0;z-index:5;width:100%;box-sizing:border-box}
+  .chat-hint{margin-top:6px}
+  /* Home on mobile keeps padding */
+  .home-wrap{padding:50px 14px 40px}
+  .home-title{font-size:22px}
+  /* Wider bubbles on mobile */
+  .msg-user-bubble{max-width:95%}
+  /* Remove heavy table scroll on mobile */
+  .data-table{font-size:11px}
+  .variant-grid{grid-template-columns:1fr}
+  .risk-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+/* ── Low Data Mode toggle ───────────────────────────────────────────────── */
+.low-data-toggle{display:flex;align-items:center;gap:5px;margin-top:8px;padding:5px 0;font-size:11px;color:var(--text3);cursor:pointer;transition:color 0.12s;background:none;border:none;font-family:inherit}
+.low-data-toggle:hover{color:var(--text2)}
+body.low-data .low-data-toggle{color:var(--yellow)}
+#low-data-icon{font-size:13px}
+.bw-indicator{font-size:10px;color:var(--text3);margin-top:2px;min-height:14px;letter-spacing:0.2px}
+
+/* ── Low Data Mode overrides ────────────────────────────────────────────── */
+body.low-data *{animation:none!important;transition:none!important}
+body.low-data .evidence-panel{display:none!important}
+body.low-data .layout{grid-template-columns:220px 1fr}
+body.low-data .home-sources{display:none}
+body.low-data .skeleton-wrap{display:none}
+body.low-data .msg-data{display:none}
+body.low-data .immediate-response-section{border-color:rgba(16,185,129,0.15);background:transparent}
+
+/* ── Reduced motion (system preference) ────────────────────────────────── */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<button class="hamburger" id="ham" onclick="toggleSidebar()" aria-label="Menu">
+  <span></span><span></span><span></span>
+</button>
+<div class="sidebar-overlay" id="sov" onclick="toggleSidebar()"></div>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-name">BioSage</div>
+      <div class="brand-sub">Biomedical Intelligence</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-item active" data-page="home" onclick="nav('home')"><span class="nav-dot"></span>Research</div>
+      <div class="nav-item" data-page="variant" onclick="nav('variant')"><span class="nav-dot"></span>Variant Lookup</div>
+      <div class="nav-item" data-page="vcf" onclick="nav('vcf')"><span class="nav-dot"></span>Genome Upload</div>
+      <div class="nav-item" data-page="literature" onclick="nav('literature')"><span class="nav-dot"></span>Literature</div>
+      <div class="nav-item" data-page="analyses" onclick="nav('analyses')"><span class="nav-dot"></span>Saved Analyses</div>
+    </div>
+    <div class="sidebar-recent">
+      <div class="sidebar-label" style="margin-top:2px">Recent</div>
+      <div id="recent-list"><span style="font-size:11px;color:var(--text3);padding:0 8px">No recent searches</span></div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="footer-text">v4.0 &middot; <a href="/api/docs" target="_blank">API</a></div>
+      <button id="low-data-btn" onclick="toggleLowData()" class="low-data-toggle" title="Toggle Low Data Mode">
+        <span id="low-data-icon">◎</span> <span id="low-data-label">Low Data Mode</span>
+      </button>
+      <div id="bw-indicator" class="bw-indicator"></div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="main-inner" id="main-inner"></div>
+  </main>
+
+  <!-- Evidence panel -->
+  <aside class="evidence-panel">
+    <div class="ep-header">
+      <span class="ep-title">Sources</span>
+      <span class="ep-count" id="ep-count"></span>
+    </div>
+    <div class="ep-body" id="ep-body">
+      <div class="ep-empty">Citations will appear here after a search.</div>
+    </div>
+    <div class="ep-show-more" id="ep-show-more" style="display:none">
+      <button class="ep-show-more-btn" id="ep-show-more-btn" onclick="expandSources()"></button>
+    </div>
+  </aside>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+const SUGGESTIONS = [
+  "What is cystic fibrosis",
+  "Genes causing Huntington disease",
+  "BRCA1 gene function and disease associations",
+  "Which variants affect CFTR",
+  "Pathways involved in Alzheimer disease",
+  "Treatments for type 2 diabetes",
+  "What does the TP53 gene do",
+  "rs113993960 variant analysis",
+  "Sickle cell disease genetic basis",
+  "What pathways are disrupted in Parkinson disease",
+  "APOE gene and Alzheimer risk",
+  "Drugs targeting EGFR",
+  "Hereditary breast cancer genes",
+  "What is the clinical significance of rs28897696",
+  "Marfan syndrome diagnosis and genetics",
+  "What genes are associated with autism spectrum disorder",
+];
+
+const DB_COLORS = {
+  ClinVar:'#EF4444', OpenTargets:'#3B82F6', DisGeNET:'#A855F7',
+  ChEMBL:'#F97316', Reactome:'#22C55E', OMIM:'#EAB308', MedGen:'#06B6D4',
+  HPO:'#84CC16', PubMed:'#F472B6', 'NCBI MedGen':'#06B6D4',
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+const S = {
+  page: 'home',
+  conversation: [],  // [{role, content, sections, followups, citations, evidence, query_type}]
+  loading: false,
+  allCitations: [],  // full citation list for lazy loading
+  shownCitations: 0,
+  lowData: false,    // Low Data Mode flag
+};
+
+// ── Adaptive bandwidth detection ──────────────────────────────────────────
+(function initBandwidth() {
+  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  const indicator = () => document.getElementById('bw-indicator');
+
+  function applyMode(isLow, reason) {
+    S.lowData = isLow;
+    document.body.classList.toggle('low-data', isLow);
+    const icon  = document.getElementById('low-data-icon');
+    const label = document.getElementById('low-data-label');
+    if (icon)  icon.textContent  = isLow ? '●' : '◎';
+    if (label) label.textContent = isLow ? 'Low Data: ON' : 'Low Data Mode';
+    const el = indicator();
+    if (el) el.textContent = reason || '';
+  }
+
+  function detect() {
+    if (!conn) return;
+    const slow = ['slow-2g', '2g', '3g'].includes(conn.effectiveType);
+    if (slow) applyMode(true, `Network: ${conn.effectiveType}`);
+    else      applyMode(S.lowData, conn.effectiveType ? `Network: ${conn.effectiveType}` : '');
+  }
+
+  detect();
+  if (conn) conn.addEventListener('change', detect);
+})();
+
+function toggleLowData() {
+  const isLow = !S.lowData;
+  S.lowData = isLow;
+  document.body.classList.toggle('low-data', isLow);
+  const icon  = document.getElementById('low-data-icon');
+  const label = document.getElementById('low-data-label');
+  if (icon)  icon.textContent  = isLow ? '●' : '◎';
+  if (label) label.textContent = isLow ? 'Low Data: ON' : 'Low Data Mode';
+  const el = document.getElementById('bw-indicator');
+  if (el) el.textContent = isLow ? 'Manual override' : '';
+}
+
+// ── Stream parser state (per query) ───────────────────────────────────────
+let parser = null;
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+function nav(page) {
+  S.page = page;
+  document.querySelectorAll('.nav-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.page === page));
+  renderPage();
+  // Close mobile sidebar after navigation
+  const sb = document.getElementById('sidebar');
+  if (sb && sb.classList.contains('open')) {
+    const ov = document.getElementById('sov');
+    const ham = document.getElementById('ham');
+    sb.classList.remove('open');
+    if (ov) ov.classList.remove('show');
+    if (ham) ham.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+}
+function navChat() {
+  S.page = 'chat';
+  document.querySelectorAll('.nav-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.page === 'home'));
+
+  const thread = document.getElementById('chat-thread');
+  if (thread && !S._loadingHistory) {
+    // Active chat: refresh thread content in place (no full DOM rebuild)
+    thread.innerHTML = renderConversation();
+  } else {
+    // Different page or loading history: full rebuild required
+    renderPage();
+  }
+}
+
+// Called when loading saved history — forces full rebuild even if chat is open
+function navChatFromHistory() {
+  S._loadingHistory = true;
+  navChat();
+  S._loadingHistory = false;
+}
+
+// ── Page dispatcher ────────────────────────────────────────────────────────
+function renderPage() {
+  const el = document.getElementById('main-inner');
+  el.innerHTML = '';
+  switch (S.page) {
+    case 'home':      el.appendChild(buildHome());      break;
+    case 'chat':      el.appendChild(buildChat());      break;
+    case 'variant':   el.innerHTML = pageVariant();     break;
+    case 'vcf':       el.innerHTML = pageVCF();         break;
+    case 'literature':el.innerHTML = pageLiterature();  break;
+    case 'analyses':  el.innerHTML = pageAnalyses(); loadAnalyses(); break;
+  }
+}
+
+// ── Home page ──────────────────────────────────────────────────────────────
+function buildHome() {
+  const wrap = document.createElement('div');
+  wrap.className = 'home-wrap';
+  wrap.innerHTML = `
+    <div class="home-title">Biomedical Research</div>
+    <div class="home-sub">Ask any question about diseases, genes, variants, or pathways.<br>Every answer is grounded in primary biomedical databases with inline citations.</div>
+    <div class="search-wrap" id="sw">
+      <input class="search-input" id="hs" placeholder="e.g. cystic fibrosis, rs113993960, BRCA1 gene..." autocomplete="off" spellcheck="false"/>
+      <button class="search-btn" id="hbtn">Search</button>
+    </div>
+    <div class="example-queries">
+      ${['Cystic fibrosis','Alzheimer disease','BRCA1 gene','rs113993960','Asthma pathways','Huntington disease'].map(q =>
+        `<span class="example-chip">${esc(q)}</span>`).join('')}
+    </div>
+    <div class="home-sources">
+      <div class="sources-label">Integrated databases</div>
+      <div class="sources-grid">
+        ${['ClinVar','OMIM','Open Targets','DisGeNET','ChEMBL','Reactome','HPO','PubMed','NCBI MedGen','dbSNP','Ensembl','UniProt'].map(s =>
+          `<span class="source-badge">${s}</span>`).join('')}
+      </div>
+    </div>`;
+
+  const inp = wrap.querySelector('#hs');
+  const btn = wrap.querySelector('#hbtn');
+  const sw  = wrap.querySelector('#sw');
+
+  // Autocomplete
+  let acIdx = -1;
+  inp.addEventListener('input', () => { acIdx = -1; showAC(inp, sw); });
+  inp.addEventListener('keydown', e => {
+    const items = sw.querySelectorAll('.ac-item');
+    if (e.key === 'ArrowDown') { acIdx = Math.min(acIdx+1, items.length-1); highlightAC(items, acIdx); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { acIdx = Math.max(acIdx-1, -1); highlightAC(items, acIdx); e.preventDefault(); }
+    else if (e.key === 'Enter') {
+      const hi = sw.querySelector('.ac-item.focused');
+      if (hi) { startQuery(hi.dataset.q); closeAC(sw); }
+      else startQuery(inp.value.trim());
+    } else if (e.key === 'Escape') { closeAC(sw); }
+  });
+  inp.addEventListener('blur', () => setTimeout(() => closeAC(sw), 150));
+  btn.addEventListener('click', () => startQuery(inp.value.trim()));
+
+  wrap.querySelectorAll('.example-chip').forEach(chip => {
+    chip.addEventListener('click', () => startQuery(chip.textContent));
+  });
+
+  return wrap;
+}
+
+function showAC(inp, sw) {
+  closeAC(sw);
+  const q = inp.value.trim();
+  if (q.length < 2) return;
+  const matches = SUGGESTIONS.filter(s => s.toLowerCase().includes(q.toLowerCase())).slice(0, 6);
+  if (!matches.length) return;
+  const list = document.createElement('div');
+  list.className = 'autocomplete-list';
+  list.id = 'ac-list';
+  matches.forEach(m => {
+    const item = document.createElement('div');
+    item.className = 'ac-item';
+    item.dataset.q = m;
+    item.innerHTML = `<span class="ac-icon">&#x2192;</span>${esc(m)}`;
+    item.addEventListener('mousedown', () => startQuery(m));
+    list.appendChild(item);
+  });
+  sw.appendChild(list);
+}
+
+function closeAC(sw) {
+  const el = sw ? sw.querySelector('#ac-list') : document.getElementById('ac-list');
+  if (el) el.remove();
+}
+
+function highlightAC(items, idx) {
+  items.forEach((el, i) => el.classList.toggle('focused', i === idx));
+  if (idx >= 0 && items[idx]) {
+    const inp = document.getElementById('hs');
+    if (inp) inp.value = items[idx].dataset.q;
+  }
+}
+
+// ── Chat page ──────────────────────────────────────────────────────────────
+function buildChat() {
+  const page = document.createElement('div');
+  page.className = 'chat-page';
+
+  const thread = document.createElement('div');
+  thread.className = 'chat-thread';
+  thread.id = 'chat-thread';
+  thread.innerHTML = renderConversation();
+
+  const bar = document.createElement('div');
+  bar.className = 'chat-bar';
+  bar.innerHTML = `
+    <div class="chat-row" style="position:relative">
+      <div id="ci-ac-wrap" style="flex:1;min-width:0;position:relative">
+        <textarea class="chat-inp" id="ci" placeholder="Ask a follow-up or new question…" rows="1" autocomplete="off" spellcheck="false"></textarea>
+        <div id="ci-ac-list"></div>
+      </div>
+      <button class="chat-send" id="cs" ${S.loading ? 'disabled' : ''}>Send</button>
+    </div>
+    <div class="chat-hint">
+      <span class="chat-hint-text">Enter to send &middot; Shift+Enter for new line</span>
+      <button class="new-chat-btn" onclick="newChat()">New conversation</button>
+    </div>`;
+
+  page.appendChild(thread);
+  page.appendChild(bar);
+  setTimeout(() => { thread.scrollTop = thread.scrollHeight; }, 0);
+
+  const inp  = bar.querySelector('#ci');
+  const btn  = bar.querySelector('#cs');
+  const acWrap = bar.querySelector('#ci-ac-list');
+
+  function closeCiAC() { acWrap.innerHTML = ''; }
+  function showCiAC() {
+    closeCiAC();
+    const q = inp.value.trim();
+    if (q.length < 2) return;
+    const matches = SUGGESTIONS.filter(s => s.toLowerCase().includes(q.toLowerCase())).slice(0, 5);
+    if (!matches.length) return;
+    acWrap.style.cssText = 'position:absolute;bottom:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);z-index:200;overflow:hidden;box-shadow:0 -8px 24px rgba(0,0,0,0.4)';
+    matches.forEach(m => {
+      const item = document.createElement('div');
+      item.style.cssText = 'padding:9px 14px;font-size:13px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px';
+      item.innerHTML = `<span style="font-size:11px;color:var(--text3)">↗</span>${esc(m)}`;
+      item.addEventListener('mouseover', () => item.style.background = 'var(--surface2)');
+      item.addEventListener('mouseout',  () => item.style.background = '');
+      item.addEventListener('mousedown', () => { startQuery(m); inp.value = ''; closeCiAC(); });
+      acWrap.appendChild(item);
+    });
+  }
+
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      closeCiAC();
+      const v = inp.value.trim();
+      // If the input matches a disease name exactly or is ≥3 words, treat as new search
+      const isNewSearch = SUGGESTIONS.some(s => s.toLowerCase() === v.toLowerCase());
+      if (isNewSearch) startQuery(v);
+      else sendFollowup(v);
+    } else if (e.key === 'Escape') { closeCiAC(); }
+  });
+  inp.addEventListener('input', () => {
+    inp.style.height = 'auto';
+    inp.style.height = Math.min(inp.scrollHeight, 112) + 'px';
+    showCiAC();
+  });
+  inp.addEventListener('blur', () => setTimeout(closeCiAC, 150));
+  btn.addEventListener('click', () => {
+    const v = inp.value.trim();
+    closeCiAC();
+    const isNewSearch = SUGGESTIONS.some(s => s.toLowerCase() === v.toLowerCase());
+    if (isNewSearch) startQuery(v);
+    else sendFollowup(v);
+    inp.value = '';
+    inp.style.height = 'auto';
+  });
+  return page;
+}
+
+function renderConversation() {
+  return S.conversation.map((msg, i) => renderMsg(msg, i)).join('');
+}
+
+function renderMsg(msg, idx) {
+  if (msg.role === 'user') {
+    return `<div class="msg" id="msg-${idx}">
+      <div class="msg-header"><span class="msg-role user">You</span></div>
+      <div class="msg-user-bubble">${esc(msg.content)}</div>
+    </div>`;
+  }
+
+  const typeLabel = {disease:'Disease Report',variant:'Variant Analysis',gene:'Gene Report',chat:'AI Research',general:'AI Research'}[msg.query_type] || 'Research';
+  const cachedBadge = msg.cached ? '<span class="cached-badge">Cached</span>' : '';
+  let inner = '';
+
+  if (msg.sections && msg.sections.length) {
+    inner += '<div class="msg-sections">';
+    inner += msg.sections.map(s => {
+      try {
+        return `<div class="report-section">
+          <div class="report-section-title">${esc(s.title)}</div>
+          <div class="report-section-body">${fmtCitations(s.content)}</div>
+        </div>`;
+      } catch(_) {
+        return `<div class="report-section"><div class="report-section-title">${esc(s.title)}</div></div>`;
+      }
+    }).join('');
+    inner += '</div>';
+    if (msg.evidence && Object.keys(msg.evidence).length > 0) {
+      try {
+        const datHtml = renderDataTables(msg.evidence);
+        if (datHtml) inner += `<div class="msg-data">${datHtml}</div>`;
+      } catch(e) { console.warn('renderDataTables failed:', e); }
+    }
+  } else if (msg.content) {
+    inner += `<div class="msg-answer">${fmtCitations(msg.content)}</div>`;
+  }
+
+  // Immediate Response always last — below all scientific sections and data tables
+  if (msg._immediateResponse) {
+    inner += renderImmediateResponse(msg._immediateResponse);
+  }
+
+  if (msg.followups && msg.followups.length) {
+    inner += `<div class="followup-chips">${msg.followups.map(q =>
+      `<button class="followup-chip" data-q="${esc(q)}" onclick="sendFollowup(this.dataset.q)">${esc(q)}</button>`
+    ).join('')}</div>`;
+  }
+
+  return `<div class="msg" id="msg-${idx}">
+    <div class="msg-header">
+      <span class="msg-role assistant">BioSage</span>
+      <span class="msg-type-tag">${typeLabel}</span>
+      ${cachedBadge}
+      <div class="msg-actions">
+        <button class="msg-act-btn" id="copy-${idx}" onclick="copyMsg(${idx})">Copy</button>
+        <button class="msg-act-btn" onclick="regenMsg(${idx})">Retry</button>
+      </div>
+    </div>
+    ${inner}
+  </div>`;
+}
+
+// ── SVG chart builders ────────────────────────────────────────────────────────
+function _geneBarChart(genes) {
+  const items = genes.slice(0, 10);
+  const W = 340, ROW = 28, PAD = 8, LABEL = 80;
+  const H = items.length * ROW + PAD * 2;
+  const bars = items.map((g, i) => {
+    const score = g.association_score || 0;
+    const bw = Math.max(2, Math.round((W - LABEL - 60) * score));
+    const y = PAD + i * ROW;
+    const col = score > 0.7 ? '#3B82F6' : score > 0.4 ? '#6366F1' : '#8B5CF6';
+    const label = (g.gene || '').slice(0, 10);
+    return `
+      <text x="${LABEL - 6}" y="${y + 17}" text-anchor="end" fill="#A1A1AA" font-size="11" font-family="Inter,sans-serif">${esc(label)}</text>
+      <rect x="${LABEL}" y="${y + 6}" width="${bw}" height="16" rx="3" fill="${col}" opacity="0.85"/>
+      <text x="${LABEL + bw + 5}" y="${y + 17}" fill="#71717A" font-size="10" font-family="Inter,sans-serif">${score > 0 ? score.toFixed(2) : '—'}</text>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="display:block;max-width:100%">${bars}</svg>`;
+}
+
+function _variantDonut(variants) {
+  const counts = { Pathogenic: 0, 'Likely Pathogenic': 0, VUS: 0, Benign: 0, Other: 0 };
+  variants.forEach(v => {
+    const s = (v.clinical_significance || '').toLowerCase();
+    if (s.includes('pathogenic') && s.includes('likely')) counts['Likely Pathogenic']++;
+    else if (s.includes('pathogenic')) counts['Pathogenic']++;
+    else if (s.includes('benign')) counts['Benign']++;
+    else if (s.includes('uncertain') || s.includes('vus')) counts['VUS']++;
+    else counts['Other']++;
+  });
+  const colours = { Pathogenic:'#EF4444','Likely Pathogenic':'#F97316',VUS:'#EAB308',Benign:'#22C55E',Other:'#71717A' };
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+  if (!total) return '';
+  const R = 44, CX = 55, CY = 55, IR = 26;
+  let angle = -Math.PI / 2, arcs = '', legend = '';
+  let ly = 14;
+  Object.entries(counts).forEach(([label, count]) => {
+    if (!count) return;
+    const slice = (count / total) * 2 * Math.PI;
+    const x1 = CX + R * Math.cos(angle), y1 = CY + R * Math.sin(angle);
+    angle += slice;
+    const x2 = CX + R * Math.cos(angle), y2 = CY + R * Math.sin(angle);
+    const large = slice > Math.PI ? 1 : 0;
+    const col = colours[label];
+    arcs += `<path d="M${CX},${CY} L${x1.toFixed(1)},${y1.toFixed(1)} A${R},${R} 0 ${large},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${col}" opacity="0.9"/>`;
+    legend += `<circle cx="122" cy="${ly - 3}" r="4" fill="${col}"/><text x="130" y="${ly}" fill="#A1A1AA" font-size="10" font-family="Inter,sans-serif">${esc(label)} (${count})</text>`;
+    ly += 16;
+  });
+  arcs += `<circle cx="${CX}" cy="${CY}" r="${IR}" fill="#09090B"/>`;
+  arcs += `<text x="${CX}" y="${CY+4}" text-anchor="middle" fill="#F4F4F5" font-size="11" font-weight="600" font-family="Inter,sans-serif">${total}</text>`;
+  return `<svg viewBox="0 0 260 ${Math.max(110,ly)}" width="260" height="${Math.max(110,ly)}" style="display:block;max-width:100%">${arcs}${legend}</svg>`;
+}
+
+function _exportDataCSV(ev, id) {
+  const genes = ev.genes || [], variants = ev.variants || [], drugs = ev.drugs || [];
+  let csv = 'Section,Field1,Field2,Field3\n';
+  genes.forEach(g => { csv += `Gene,"${g.gene||''}","${g.gene_name||''}","${g.association_score??''}"\n`; });
+  variants.forEach(v => { csv += `Variant,"${v.variant_name||v.clinvar_id||''}","${v.gene||''}","${v.clinical_significance||''}"\n`; });
+  drugs.forEach(d => { csv += `Drug,"${d.drug_name||''}","Phase ${d.max_phase||0}",""\n`; });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'biosage_data.csv'; a.click();
+}
+// Store evidence refs for CSV export
+const _evidenceStore = {};
+
+function renderDataTables(ev) {
+  let html = '';
+  const genes    = ev.genes     || [];
+  const variants = ev.variants  || [];
+  const drugs    = ev.drugs     || [];
+  const pheno    = ev.phenotypes|| [];
+  const storeId  = `ev-${Date.now()}`;
+  _evidenceStore[storeId] = ev;
+
+  // ── Visualisations row ──────────────────────────────────────────────────────
+  if (genes.length || variants.length) {
+    let charts = '';
+    if (genes.length > 1) {
+      charts += `<div class="chart-card">
+        <div class="chart-card-title">Gene Association Scores</div>
+        ${_geneBarChart(genes)}
+      </div>`;
+    }
+    if (variants.length > 1) {
+      const donut = _variantDonut(variants);
+      if (donut) charts += `<div class="chart-card">
+        <div class="chart-card-title">Variant Pathogenicity</div>
+        ${donut}
+      </div>`;
+    }
+    if (charts) html += `<div class="charts-row">${charts}</div>`;
+  }
+
+  // ── Gene table ──────────────────────────────────────────────────────────────
+  if (genes.length) {
+    const tid = `gt-${storeId}`;
+    html += `
+    <div class="tbl-wrap" style="margin-top:16px">
+      <div class="tbl-toolbar">
+        <span class="tbl-label">Associated Genes · ${genes.length} found</span>
+        <button class="tbl-export-btn" onclick="_exportDataCSV(_evidenceStore['${storeId}'],'${tid}')">↓ Export CSV</button>
+      </div>
+      <div class="tbl-scroll">
+        <table id="${tid}" class="md-table">
+          <thead><tr><th>Gene</th><th>Full Name</th><th>Source</th><th>Score</th><th>Evidence</th></tr></thead>
+          <tbody>
+          ${genes.map(g => `<tr>
+            <td><strong style="color:var(--accent)">${esc(g.gene||'')}</strong></td>
+            <td>${esc(g.gene_name||'—')}</td>
+            <td style="font-size:11px;color:var(--text3)">${esc(g.source||'—')}</td>
+            <td><div class="score-wrap"><div class="score-bar"><div class="score-fill" style="width:${Math.round((g.association_score||0)*100)}%"></div></div><span class="score-val">${g.association_score!=null?g.association_score:'—'}</span></div></td>
+            <td style="font-size:11px">${esc(g.evidence_type||g.source_name||'—')}</td>
+          </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
+  // ── Variant table ───────────────────────────────────────────────────────────
+  if (variants.length) {
+    const vid = `vt-${storeId}`;
+    html += `
+    <div class="tbl-wrap" style="margin-top:14px">
+      <div class="tbl-toolbar">
+        <span class="tbl-label">Pathogenic Variants · ${variants.length} found</span>
+        <button class="tbl-export-btn" onclick="exportTableCSV('${vid}')">↓ Export CSV</button>
+      </div>
+      <div class="tbl-scroll">
+        <table id="${vid}" class="md-table">
+          <thead><tr><th>Variant</th><th>Gene</th><th>Type</th><th>Significance</th><th>ClinVar ID</th></tr></thead>
+          <tbody>
+          ${variants.map(v => `<tr>
+            <td style="font-size:11px;font-family:monospace">${esc(v.variant_name||v.hgvs||'—')}</td>
+            <td><strong style="color:var(--accent)">${esc(v.gene||'—')}</strong></td>
+            <td style="font-size:11px;color:var(--text3)">${esc(v.variant_type||'—')}</td>
+            <td>${sigBadge(v.clinical_significance)}</td>
+            <td style="font-size:11px;color:var(--text3)">${esc(v.clinvar_id||'—')}</td>
+          </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
+  // ── Drugs table ─────────────────────────────────────────────────────────────
+  if (drugs.length) {
+    html += `
+    <div class="tbl-wrap" style="margin-top:14px">
+      <div class="tbl-toolbar">
+        <span class="tbl-label">Treatments / Drugs · ${drugs.length} found</span>
+      </div>
+      <div class="tbl-scroll">
+        <table class="md-table">
+          <thead><tr><th>Drug</th><th>Mechanism</th><th>Phase</th></tr></thead>
+          <tbody>
+          ${drugs.map(d => `<tr>
+            <td><strong>${esc(d.drug_name||'')}</strong></td>
+            <td style="font-size:12px;color:var(--text2)">${esc(d.mechanism_of_action||d.drug_type||'—')}</td>
+            <td>${phaseBadge(d.max_phase)}</td>
+          </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
+  // ── Phenotypes ──────────────────────────────────────────────────────────────
+  if (pheno.length) {
+    html += `
+    <div style="margin-top:14px">
+      <div class="msg-data-title">Clinical Features</div>
+      <div class="pheno-tags">${pheno.slice(0,20).map(p => `<span class="pheno-tag">${esc(p.phenotype)}</span>`).join('')}</div>
+    </div>`;
+  }
+
+  return html;
+}
+
+// ── Query execution (streaming) ────────────────────────────────────────────
+async function startQuery(q) {
+  if (!q || S.loading) return;
+  // Reset state for fresh query
+  S.conversation = [];
+  S.allCitations = [];
+  updateEP([], false);
+  navChat();
+  // If thread already exists (no DOM rebuild), clear it for fresh start
+  const thread = document.getElementById('chat-thread');
+  if (thread) thread.innerHTML = '';
+  await executeQuery(q);
+}
+
+async function sendFollowup(q) {
+  if (!q || S.loading) return;
+  const inp = document.getElementById('ci');
+  if (inp) { inp.value = ''; inp.style.height = 'auto'; }
+  await executeQuery(q);
+}
+
+async function executeQuery(q) {
+  if (!q || S.loading) return;
+  S.loading = true;
+
+  // Disable send button
+  const sendBtn = document.getElementById('cs');
+  if (sendBtn) sendBtn.disabled = true;
+
+  // Add user message
+  const userIdx = S.conversation.length;
+  S.conversation.push({ role: 'user', content: q });
+  appendMsgToThread(renderMsg(S.conversation[userIdx], userIdx));
+
+  // Add assistant placeholder
+  const asstIdx = S.conversation.length;
+  S.conversation.push({ role: 'assistant', content: '', sections: [], followups: [], citations: [], evidence: {}, query_type: 'general' });
+  appendMsgToThread(buildLoadingMsg(asstIdx));
+
+  const history = buildHistory();
+
+  // Initialize stream parser
+  parser = new StreamParser(asstIdx);
+
+  try {
+    const resp = await fetch('/api/query/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q, history, bandwidth: S.lowData ? 'low' : 'high' }),
+    });
+
+    if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split('\n\n');
+      buf = parts.pop();
+      for (const part of parts) {
+        if (!part.startsWith('data: ')) continue;
+        try {
+          const ev = JSON.parse(part.slice(6));
+          handleStreamEvent(ev, asstIdx);
+        } catch (_) {}
+      }
+    }
+  } catch (e) {
+    const asst = S.conversation[asstIdx];
+    asst.content = `Error: ${e.message}`;
+    refreshMsg(asstIdx);
+  }
+
+  // Finalize
+  parser.finalize();
+  S.loading = false;
+  loadRecent();
+
+  if (sendBtn) sendBtn.disabled = false;
+}
+
+// ── Disease image fetcher (backend endpoint → Wikipedia + PMC figures) ───────
+async function fetchDiseaseImages(diseaseName, asstIdx, pmids) {
+  try {
+    const pmidParam = (pmids || []).slice(0, 6).join(',');
+    const url = `/api/disease-images?q=${encodeURIComponent(diseaseName)}&pmids=${encodeURIComponent(pmidParam)}`;
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const { images } = await res.json();
+    if (!images || !images.length) return;
+    injectDiseaseImages(asstIdx, images);
+  } catch (_) {}
+}
+
+function injectDiseaseImages(asstIdx, images) {
+  const secWrap = document.getElementById(`asst-sections-${asstIdx}`);
+  if (!secWrap) return;
+
+  const doInject = () => {
+    const titles = [...secWrap.querySelectorAll('.report-section-title')];
+    const overviewTitle = titles.find(t => /overview/i.test(t.textContent));
+    if (!overviewTitle) return false;
+    const overviewSec = overviewTitle.closest('.report-section');
+    if (!overviewSec) return false;
+    if (overviewSec.querySelector('.disease-imgs-block')) return true; // already done
+
+    // Build image gallery block
+    const gallery = document.createElement('div');
+    gallery.className = 'disease-imgs-block';
+
+    const row = document.createElement('div');
+    row.className = 'disease-imgs-row';
+
+    images.forEach((img, i) => {
+      const card = document.createElement('div');
+      card.className = 'disease-img-card' + (i === 0 ? ' primary' : '');
+      const srcLink = img.source_url
+        ? `<a href="${img.source_url}" target="_blank" rel="noopener" class="wiki-img-link">${esc(img.source)}</a>`
+        : `<span>${esc(img.source)}</span>`;
+      card.innerHTML = `
+        <img src="${img.url}" alt="${esc(img.caption || '')}" loading="lazy"
+             onerror="this.closest('.disease-img-card').remove()"/>
+        <div class="disease-img-cap">${esc((img.caption||'').slice(0,100))} · ${srcLink}</div>`;
+      row.appendChild(card);
+    });
+
+    gallery.appendChild(row);
+    const body = overviewSec.querySelector('.report-section-body');
+    if (body) body.prepend(gallery);
+    else overviewSec.appendChild(gallery);
+    return true;
+  };
+
+  // Retry up to 40× (12s) — sections arrive as tokens stream in
+  let tries = 0;
+  const iv = setInterval(() => {
+    if (doInject() || ++tries > 40) clearInterval(iv);
+  }, 300);
+}
+
+function handleStreamEvent(ev, asstIdx) {
+  const asst = S.conversation[asstIdx];
+  switch (ev.type) {
+    case 'meta':
+      asst._metaQuery = ev.query || '';
+      // Show normalisation or typo-correction notice
+      if (ev.original && ev.original !== ev.query) {
+        const ltxt = document.getElementById(`asst-loading-txt-${asstIdx}`);
+        if (ltxt) {
+          ltxt.textContent = ev.correction
+            ? `Corrected "${ev.original}" → "${ev.query}" — retrieving…`
+            : `Interpreted as: "${ev.query}" — retrieving…`;
+        }
+      }
+      break;
+    case 'classified': {
+      asst.query_type = ev.query_type;
+      updateMsgTypeTag(asstIdx, ev.query_type);
+      // Kick off image fetch for disease queries immediately (before citations arrive)
+      if (ev.query_type === 'disease') {
+        const dq = ev.query || asst._metaQuery || '';
+        if (dq) {
+          asst._diseaseQ = dq;
+          // Initial fetch with no PMIDs — Wikipedia image arrives fast
+          fetchDiseaseImages(dq, asstIdx, []);
+        }
+      }
+      const labels = {disease:'Querying MedGen, OMIM, Open Targets, ClinVar, ChEMBL, HPO…',
+                      variant:'Querying ClinVar, Ensembl, dbSNP, UniProt in parallel…',
+                      gene:'Querying UniProt and PubMed…',
+                      drug:'Searching databases and literature…',
+                      general:'Searching databases and literature…'};
+      const ltxt = document.getElementById(`asst-loading-txt-${asstIdx}`);
+      if (ltxt) ltxt.textContent = labels[ev.query_type] || 'Retrieving…';
+      updateProgress(asstIdx, 'retrieving');
+      break;
+    }
+    case 'cached':
+      asst.cached = true;
+      break;
+    case 'data':
+      asst.evidence = asst.evidence || {};
+      asst.evidence[ev.key] = ev.data;
+      refreshDataSection(asstIdx);
+      updateProgress(asstIdx, 'analyzing');
+      break;
+    case 'token':
+      if (!parser._wroteFirstToken) {
+        parser._wroteFirstToken = true;
+        updateProgress(asstIdx, 'writing');
+        const ltxt = document.getElementById(`asst-loading-txt-${asstIdx}`);
+        if (ltxt) ltxt.textContent = 'Generating response…';
+        scrollThreadToBottom();
+      }
+      parser.processToken(ev.text, asstIdx);
+      // Throttled scroll — only every ~20 tokens to avoid layout thrash
+      if (!(parser._tokenCount = ((parser._tokenCount || 0) + 1) % 20)) scrollThreadToBottom();
+      break;
+    case 'llm_done':
+      parser.flushBuffer(asstIdx);
+      break;
+    case 'section_parsed':
+      // From cached result — just add directly
+      break;
+    case 'section':
+      // Completed section (non-streaming fallback)
+      asst.sections.push({ title: ev.title, content: ev.content });
+      refreshMsg(asstIdx);
+      break;
+    case 'answer':
+      asst.content = ev.text;
+      refreshMsg(asstIdx);
+      break;
+    case 'variant_data':
+      asst.evidence = ev.data;
+      asst.query_type = 'variant';
+      renderVariantInMsg(asstIdx, ev.data);
+      break;
+    case 'gene_data':
+      asst.evidence = ev.data;
+      asst.query_type = 'gene';
+      break;
+    case 'followups':
+      asst.followups = (ev.followups || []).map(q => q.replace(/\s*\[\d+\]/g, ''));
+      refreshFollowups(asstIdx);
+      break;
+    case 'citations':
+      asst.citations = ev.citations || [];
+      S.allCitations = ev.citations || [];
+      updateEP(ev.citations, true);
+      // Re-fetch images now that we have real PMIDs from cited articles
+      if (asst.query_type === 'disease' && asst._diseaseQ && (ev.citations||[]).length) {
+        const pmids = (ev.citations || [])
+          .map(c => { const m = (c.url||'').match(/pubmed[^\d]*(\d+)/i); return m ? m[1] : null; })
+          .filter(Boolean);
+        if (pmids.length) fetchDiseaseImages(asst._diseaseQ, asstIdx, pmids);
+      }
+      break;
+    case 'immediate_response': {
+      asst._immediateResponse = ev.content;
+      const irEl = document.getElementById(`asst-ir-${asstIdx}`);
+      if (irEl) irEl.innerHTML = renderImmediateResponse(ev.content);
+      break;
+    }
+    case 'done':
+      removeLoadingIndicator(asstIdx);
+      scrollThreadToBottom();
+      break;
+    case 'error': {
+      const errEl = document.getElementById(`asst-sections-${asstIdx}`);
+      if (errEl) {
+        errEl.innerHTML = `<div style="color:var(--orange);background:var(--orange-bg);border:1px solid rgba(249,115,22,0.25);border-radius:var(--radius);padding:12px 16px;font-size:13px;line-height:1.6">
+          <strong style="display:block;margin-bottom:4px">No data found</strong>${esc(ev.message)}</div>`;
+      }
+      removeLoadingIndicator(asstIdx);
+      asst.content = ev.message;
+      break;
+    }
+  }
+}
+
+// ── StreamParser — parses ##SECTION: / ##FOLLOWUPS: token stream ───────────
+class StreamParser {
+  constructor(asstIdx) {
+    this.asstIdx    = asstIdx;
+    this.buf        = '';
+    this.currentTitle   = null;
+    this.currentContent = '';
+    this.inFollowups    = false;
+    this.followupLines  = [];
+    this.hasSeenSection = false;   // true once a ##SECTION: marker arrives
+    this._chatNode      = null;    // live text node inside asst-answer div
+    this._chatText      = '';      // accumulates committed chat lines
+  }
+
+  // ── Chat-mode live rendering (no section markers) ─────────────────────
+  _ensureChatAnswer(asstIdx) {
+    const ansEl = document.getElementById(`asst-answer-${asstIdx}`);
+    const secEl = document.getElementById(`asst-sections-${asstIdx}`);
+    if (!ansEl) return null;
+    if (ansEl.style.display === 'none' || !ansEl.style.display) {
+      ansEl.style.display = '';
+      // Hide skeleton loader; keep structure
+      if (secEl) { const sk = secEl.querySelector('.skeleton-wrap'); if (sk) sk.remove(); }
+    }
+    if (!this._chatNode) {
+      // Remove cursor if any, create a fresh text node + cursor
+      this._chatNode = document.createTextNode('');
+      ansEl.appendChild(this._chatNode);
+    }
+    return ansEl;
+  }
+
+  // Committed chat line — accumulate and replace (never append duplicates)
+  _appendChatLive(text) {
+    this._chatText += text;
+    const ansEl = this._ensureChatAnswer(this.asstIdx);
+    if (!ansEl || !this._chatNode) return;
+    this._chatNode.textContent = this._chatText;
+    let cursor = ansEl.querySelector('.typing-cursor');
+    if (!cursor) { cursor = document.createElement('span'); cursor.className = 'typing-cursor'; ansEl.appendChild(cursor); }
+  }
+
+  // Partial buffer live preview — replace in-place (not append)
+  _updateChatLive(partial) {
+    const ansEl = this._ensureChatAnswer(this.asstIdx);
+    if (!ansEl || !this._chatNode) return;
+    this._chatNode.textContent = this._chatText + partial;
+    let cursor = ansEl.querySelector('.typing-cursor');
+    if (!cursor) { cursor = document.createElement('span'); cursor.className = 'typing-cursor'; ansEl.appendChild(cursor); }
+  }
+
+  _sealChatAnswer() {
+    const ansEl = document.getElementById(`asst-answer-${this.asstIdx}`);
+    if (!ansEl) return;
+    // Re-render with citation formatting using accumulated committed text
+    const raw = this._chatText || ansEl.textContent || '';
+    const cursor = ansEl.querySelector('.typing-cursor');
+    if (cursor) cursor.remove();
+    ansEl.innerHTML = fmtCitations(raw);
+    const asst = S.conversation[this.asstIdx];
+    if (asst) asst.content = raw;
+  }
+
+  processToken(text, asstIdx) {
+    this.buf += text;
+    // Process complete newline-delimited lines
+    while (true) {
+      const nl = this.buf.indexOf('\n');
+      if (nl === -1) break;
+      const line = this.buf.slice(0, nl);
+      this.buf = this.buf.slice(nl + 1);
+      this._processLine(line, asstIdx);
+    }
+    // Live preview of partial buffer — replace in-place (never append duplicates)
+    if (this.currentTitle && this.buf && !this.buf.startsWith('#')) {
+      // Section mode: update live-preview span in current section body
+      this._updateLivePreview(this.buf);
+    } else if (!this.hasSeenSection && !this.inFollowups && this.buf && !this.buf.startsWith('#')) {
+      // Chat mode: update chat text node in-place
+      this._updateChatLive(this.buf);
+    }
+  }
+
+  _processLine(line, asstIdx) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('##SECTION:')) {
+      // If we were in chat mode, seal the chat answer first
+      if (!this.hasSeenSection && this._chatNode) this._sealChatAnswer();
+      this.hasSeenSection = true;
+      this._sealSection(asstIdx);
+      this.currentTitle   = trimmed.slice(10).trim();
+      this.currentContent = '';
+      this.inFollowups    = false;
+      this._startSection(asstIdx);
+    } else if (trimmed.startsWith('##FOLLOWUPS:')) {
+      this._sealSection(asstIdx);
+      this.currentTitle = null;
+      this.inFollowups  = true;
+    } else if (this.inFollowups && trimmed) {
+      const q = trimmed.replace(/^\d+[\.\)]\s*/, '').replace(/\s*\[\d+\]/g, '');
+      if (q.length > 8) this.followupLines.push(q);
+    } else if (this.currentTitle) {
+      if (trimmed) {
+        this.currentContent += line + '\n';
+        // Commit line permanently, clearing any live-preview span first
+        this._appendLive(line + '\n');
+      }
+    } else if (!this.hasSeenSection && !this.inFollowups && trimmed) {
+      // Chat mode: commit completed line via accumulator
+      this._appendChatLive(line + '\n');
+    }
+  }
+
+  _startSection(asstIdx) {
+    const el = document.getElementById(`asst-sections-${asstIdx}`);
+    if (!el) return;
+    // Remove skeleton if present
+    const skeleton = el.querySelector('.skeleton-wrap');
+    if (skeleton) skeleton.remove();
+    const sec = document.createElement('div');
+    sec.className = 'report-section';
+    sec.id = `sec-${asstIdx}-${slugify(this.currentTitle)}`;
+    sec.innerHTML = `<div class="report-section-title">${esc(this.currentTitle)}</div>
+      <div class="report-section-body" id="secbody-${asstIdx}-${slugify(this.currentTitle)}"></div>`;
+    el.appendChild(sec);
+    scrollThreadToBottom();
+  }
+
+  // Permanently commit a completed line — clears live-preview span first
+  _appendLive(text) {
+    if (!this.currentTitle) return;
+    const id = `secbody-${this.asstIdx}-${slugify(this.currentTitle)}`;
+    const el = document.getElementById(id);
+    if (!el) return;
+    // Remove live-preview span (will be re-created for next partial token)
+    const lp = el.querySelector('.live-preview');
+    if (lp) lp.remove();
+    const cursor = el.querySelector('.typing-cursor');
+    if (cursor) cursor.remove();
+    el.appendChild(document.createTextNode(text));
+    const c = document.createElement('span');
+    c.className = 'typing-cursor';
+    el.appendChild(c);
+  }
+
+  // Partial buffer live preview — find/create a single span and SET (not append) its text
+  _updateLivePreview(text) {
+    if (!this.currentTitle) return;
+    const id = `secbody-${this.asstIdx}-${slugify(this.currentTitle)}`;
+    const el = document.getElementById(id);
+    if (!el) return;
+    let span = el.querySelector('.live-preview');
+    if (!span) {
+      const cursor = el.querySelector('.typing-cursor');
+      if (cursor) cursor.remove();
+      span = document.createElement('span');
+      span.className = 'live-preview';
+      el.appendChild(span);
+      const c = document.createElement('span');
+      c.className = 'typing-cursor';
+      el.appendChild(c);
+    }
+    span.textContent = text;
+  }
+
+  _sealSection(asstIdx) {
+    if (!this.currentTitle) return;
+    const id = `secbody-${asstIdx}-${slugify(this.currentTitle)}`;
+    const el = document.getElementById(id);
+    if (el) {
+      const cursor = el.querySelector('.typing-cursor');
+      if (cursor) cursor.remove();
+      // Re-render with citation links
+      el.innerHTML = fmtCitations(this.currentContent);
+    }
+    const asst = S.conversation[asstIdx];
+    if (asst) {
+      asst.sections.push({ title: this.currentTitle, content: this.currentContent.trim() });
+    }
+    this.currentTitle = null;
+    this.currentContent = '';
+  }
+
+  flushBuffer(asstIdx) {
+    if (this.buf.trim()) {
+      const lines = this.buf.split('\n');
+      for (const line of lines) this._processLine(line, asstIdx);
+      this.buf = '';
+    }
+    if (this.hasSeenSection) {
+      this._sealSection(asstIdx);
+    } else if (this._chatNode) {
+      this._sealChatAnswer();
+    }
+  }
+
+  finalize() {
+    const asstIdx = this.asstIdx;
+    this.flushBuffer(asstIdx);
+    if (this.followupLines.length) {
+      const asst = S.conversation[asstIdx];
+      if (asst) {
+        asst.followups = this.followupLines.slice(0, 4);
+        refreshFollowups(asstIdx);
+      }
+    }
+  }
+}
+
+// ── DOM update helpers ─────────────────────────────────────────────────────
+function appendMsgToThread(html) {
+  const thread = document.getElementById('chat-thread');
+  if (!thread) return;
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  while (div.firstChild) thread.appendChild(div.firstChild);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function buildLoadingMsg(idx) {
+  return `<div class="msg" id="msg-${idx}">
+    <div class="msg-header"><span class="msg-role assistant">BioSage</span><span class="msg-type-tag" id="type-tag-${idx}">thinking</span></div>
+    <div id="asst-sections-${idx}">
+      <div class="skeleton-wrap">
+        ${[1,2,3].map(() => `<div class="skeleton-section">
+          <div class="skeleton-title"></div>
+          <div class="skeleton-line w90"></div>
+          <div class="skeleton-line w80"></div>
+          <div class="skeleton-line w65"></div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div id="asst-answer-${idx}" class="msg-answer" style="display:none"></div>
+    <div id="asst-data-${idx}"></div>
+    <div id="asst-ir-${idx}"></div>
+    <div id="asst-fu-${idx}"></div>
+    <div id="asst-loading-${idx}" class="inline-loader" style="flex-direction:column;align-items:flex-start;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        <span id="asst-loading-txt-${idx}">Retrieving from biomedical databases…</span>
+      </div>
+      <div class="progress-steps" id="ps-wrap-${idx}">
+        <div class="ps active" id="ps-${idx}-retrieving"><div class="ps-dot"></div>Retrieving</div>
+        <span class="ps-sep">›</span>
+        <div class="ps" id="ps-${idx}-analyzing"><div class="ps-dot"></div>Analyzing</div>
+        <span class="ps-sep">›</span>
+        <div class="ps" id="ps-${idx}-writing"><div class="ps-dot"></div>Writing</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function updateMsgTypeTag(idx, qt) {
+  const el = document.getElementById(`type-tag-${idx}`);
+  const labels = {disease:'Disease Report',variant:'Variant',gene:'Gene Report',chat:'AI Research',general:'AI Research'};
+  if (el) el.textContent = labels[qt] || qt;
+}
+
+function refreshMsg(idx) {
+  const asst = S.conversation[idx];
+  if (!asst || asst.role !== 'assistant') return;
+  const secWrap = document.getElementById(`asst-sections-${idx}`);
+  const ansWrap = document.getElementById(`asst-answer-${idx}`);
+  if (asst.sections && asst.sections.length && secWrap) {
+    secWrap.innerHTML = asst.sections.map(s => `
+      <div class="report-section">
+        <div class="report-section-title">${esc(s.title)}</div>
+        <div class="report-section-body">${fmtCitations(s.content)}</div>
+      </div>`).join('');
+  } else if (asst.content && ansWrap) {
+    ansWrap.style.display = '';
+    const secW = document.getElementById(`asst-sections-${idx}`);
+    if (secW) secW.style.display = 'none';
+    ansWrap.innerHTML = fmtCitations(asst.content);
+  }
+}
+
+function refreshDataSection(idx) {
+  const asst = S.conversation[idx];
+  const el = document.getElementById(`asst-data-${idx}`);
+  if (!el || !asst) return;
+  const html = renderDataTables(asst.evidence || {});
+  if (html) {
+    el.innerHTML = `<div class="msg-data">${html}</div>`;
+    removeLoadingIndicator(idx);
+  }
+}
+
+function renderVariantInMsg(idx, data) {
+  const el = document.getElementById(`asst-data-${idx}`);
+  if (!el) return;
+  el.innerHTML = renderVariant(data);
+  removeLoadingIndicator(idx);
+}
+
+function refreshFollowups(idx) {
+  const asst = S.conversation[idx];
+  const el = document.getElementById(`asst-fu-${idx}`);
+  if (!el || !asst || !asst.followups || !asst.followups.length) return;
+  el.innerHTML = `<div class="followup-chips">${asst.followups.map(q =>
+    `<button class="followup-chip" data-q="${esc(q)}" onclick="sendFollowup(this.dataset.q)">${esc(q)}</button>`
+  ).join('')}</div>`;
+}
+
+function renderImmediateResponse(text) {
+  // Convert bullet lines to styled list items; preserve the disclaimer line distinctly
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  let items = '';
+  for (const line of lines) {
+    const body = line.replace(/^[•\-\*]\s*/, '');
+    if (body.startsWith('⚠')) {
+      items += `<li class="ir-disclaimer">${esc(body)}</li>`;
+    } else {
+      items += `<li>${esc(body)}</li>`;
+    }
+  }
+  return `<div class="immediate-response-section">
+    <div class="report-section-title" style="color:var(--green,#10b981)">Immediate Response · First Actions</div>
+    <ul class="ir-list">${items}</ul>
+  </div>`;
+}
+
+function removeLoadingIndicator(idx) {
+  const el = document.getElementById(`asst-loading-${idx}`);
+  if (el) el.remove();
+  const skeleton = document.querySelector(`#msg-${idx} .skeleton-wrap`);
+  if (skeleton) skeleton.remove();
+}
+
+function scrollThreadToBottom() {
+  const thread = document.getElementById('chat-thread');
+  if (thread) thread.scrollTop = thread.scrollHeight;
+}
+
+function buildHistory() {
+  // slice(0, -2) — exclude the current user message AND the new assistant placeholder
+  // that were pushed before this function is called, so the server never receives
+  // the current query duplicated inside the history array.
+  return S.conversation.slice(0, -2).map(m => ({
+    role: m.role,
+    content: m.role === 'assistant'
+      ? (m.sections && m.sections.length
+          ? m.sections.map(s => s.title + ': ' + s.content).join('\n\n').slice(0, 1000)
+          : (m.content || '').slice(0, 600))
+      : (m.content || ''),
+  })).filter(m => m.content);
+}
+
+function newChat() {
+  S.conversation = [];
+  S.allCitations = [];
+  updateEP([], false);
+  nav('home');
+}
+
+// ── Evidence panel ─────────────────────────────────────────────────────────
+const LAZY_COUNT = 5;
+
+function updateEP(citations, lazy = true) {
+  const body = document.getElementById('ep-body');
+  const count = document.getElementById('ep-count');
+  const moreWrap = document.getElementById('ep-show-more');
+  const moreBtn = document.getElementById('ep-show-more-btn');
+  if (!body) return;
+
+  S.allCitations = citations || [];
+  S.shownCitations = lazy ? Math.min(LAZY_COUNT, citations.length) : citations.length;
+
+  if (!citations || !citations.length) {
+    body.innerHTML = '<div class="ep-empty">No citations for this result.</div>';
+    if (count) count.textContent = '';
+    if (moreWrap) moreWrap.style.display = 'none';
+    return;
+  }
+
+  if (count) count.textContent = `${citations.length} sources`;
+  renderCitations(citations.slice(0, S.shownCitations));
+
+  if (moreWrap && moreBtn) {
+    const remaining = citations.length - S.shownCitations;
+    if (remaining > 0) {
+      moreWrap.style.display = '';
+      moreBtn.textContent = `Show ${remaining} more source${remaining === 1 ? '' : 's'}`;
+    } else {
+      moreWrap.style.display = 'none';
+    }
+  }
+}
+
+function expandSources() {
+  S.shownCitations = S.allCitations.length;
+  renderCitations(S.allCitations);
+  const moreWrap = document.getElementById('ep-show-more');
+  if (moreWrap) moreWrap.style.display = 'none';
+}
+
+function renderCitations(citations) {
+  const body = document.getElementById('ep-body');
+  if (!body) return;
+  body.innerHTML = citations.map(c => {
+    const col = DB_COLORS[c.db] || 'var(--accent)';
+    return `<div class="cit-item" id="cite-${c.n}">
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <span class="cit-n" style="background:${col}22;color:${col}">${c.n}</span>
+        <div style="flex:1;min-width:0">
+          <div class="cit-db" style="color:${col}">${esc(c.db||'')}</div>
+          <div class="cit-label">${esc(c.label||'')}</div>
+          ${c.url ? `<div class="cit-url"><a href="${c.url}" target="_blank">${c.url}</a></div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function scrollCite(n) {
+  // If citation not yet shown, expand first
+  const idx = S.allCitations.findIndex(c => c.n === n);
+  if (idx >= S.shownCitations && idx !== -1) {
+    S.shownCitations = idx + 1;
+    renderCitations(S.allCitations.slice(0, S.shownCitations));
+  }
+  const el = document.getElementById('cite-' + n);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.querySelectorAll('.cit-item').forEach(e => e.classList.remove('hi'));
+  el.classList.add('hi');
+  setTimeout(() => el.classList.remove('hi'), 2000);
+}
+
+// ── Variant Lookup ─────────────────────────────────────────────────────────
+function pageVariant() {
+  return `<div class="page-header"><div class="page-title">Variant Lookup</div></div>
+  <div class="page-search">
+    <input id="vi" placeholder="rsID — e.g. rs113993960" onkeydown="if(event.key==='Enter')lookupVar()" autocomplete="off"/>
+    <button onclick="lookupVar()">Analyze</button>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px">
+    ${['rs113993960','rs28897696','rs80357906'].map(id =>
+      `<span class="example-chip" onclick="document.getElementById('vi').value='${id}';lookupVar()">${id}</span>`
+    ).join('')}
+  </div>
+  <div id="vr"></div>`;
+}
+
+async function lookupVar() {
+  const inp = document.getElementById('vi');
+  if (!inp) return;
+  const rsid = inp.value.trim().toLowerCase();
+  if (!rsid.startsWith('rs')) { toast('rsID must begin with "rs"'); return; }
+  document.getElementById('vr').innerHTML = loaderHtml('Looking up variant across ClinVar, Ensembl, dbSNP, UniProt...');
+  try {
+    const r = await fetch('/api/variant/' + rsid);
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    document.getElementById('vr').innerHTML = renderVariant(data);
+    updateEP([], false);
+  } catch(e) { document.getElementById('vr').innerHTML = `<div style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+
+function renderVariant(data) {
+  // Support both flat keys (legacy) and sources-dict format from async_aggregate()
+  const src=data.sources||{};
+  const cv=src.ClinVar||data.clinvar||{},ens=src.Ensembl||data.ensembl||{},
+        dbsnp=src.dbSNP||data.dbsnp||{},uni=src.UniProt||data.uniprot||{},
+        acmg=data.acmg||{};
+  let html = `<div class="page-header">
+    <div class="page-title">${esc(data.rsid||'')}</div>
+    <div class="page-meta"><span class="source-tag">${esc(cv.gene||'Unknown gene')}</span>${sigBadge(cv.clinical_significance||ens.clinical_significance)}</div>
+  </div>`;
+
+  if (acmg.classification) {
+    const cls = acmgCls(acmg.classification);
+    html += `<div class="acmg-box">
+      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:6px">ACMG/AMP 2015</div>
+      <div class="acmg-class ${cls}">${esc(acmg.classification)}</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px">${esc(acmg.rationale||'')}</div>
+      <div class="acmg-criteria">${(acmg.criteria_met||[]).map(c=>`<span class="acmg-c ${acmgCritCls(c)}">${esc(c)}</span>`).join('')}</div>
+    </div>`;
+  }
+
+  html += '<div class="variant-grid">';
+  if (cv.clinical_significance) html += `<div class="vcard"><div class="vcard-source">ClinVar</div>
+    ${vr('Gene',cv.gene)}${vr('Significance',cv.clinical_significance)}${vr('Review',cv.review_status)}
+    ${vr('Diseases',(cv.associated_diseases||[]).slice(0,2).join('; '))}
+    <div style="margin-top:8px"><a href="${cv.url||'#'}" target="_blank" style="font-size:11px;color:var(--text3)">View in ClinVar</a></div>
+  </div>`;
+  if (ens.location) html += `<div class="vcard"><div class="vcard-source">Ensembl</div>
+    ${vr('Location',ens.location)}${vr('Class',ens.var_class)}${vr('MAF',ens.maf??'—')}
+    ${vr('Consequences',(ens.consequences||[]).slice(0,2).join('; '))}
+    <div style="margin-top:8px"><a href="${ens.url||'#'}" target="_blank" style="font-size:11px;color:var(--text3)">View in Ensembl</a></div>
+  </div>`;
+  if (dbsnp.snp_class) html += `<div class="vcard"><div class="vcard-source">dbSNP</div>
+    ${vr('Class',dbsnp.snp_class)}${vr('Origin',dbsnp.allele_origin)}${vr('Global MAF',dbsnp.global_maf)}${vr('Position',dbsnp.chromosomal_position)}
+    <div style="margin-top:8px"><a href="${dbsnp.url||'#'}" target="_blank" style="font-size:11px;color:var(--text3)">View in dbSNP</a></div>
+  </div>`;
+  if (uni&&uni.accession) html += `<div class="vcard"><div class="vcard-source">UniProt</div>
+    ${vr('Protein',uni.protein_name)}${vr('Accession',uni.accession)}${vr('Length',uni.sequence_length?uni.sequence_length+' aa':'—')}
+    <div style="margin-top:8px"><a href="https://www.uniprot.org/uniprot/${uni.accession}" target="_blank" style="font-size:11px;color:var(--text3)">View in UniProt</a></div>
+  </div>`;
+  html += '</div>';
+
+  const conflicts = data.conflicts||[];
+  if (conflicts.length) html += `<div class="section"><div class="section-title">Data Conflicts</div>
+    <table class="data-table"><thead><tr><th>Field</th><th>Source A</th><th>Source B</th></tr></thead>
+    <tbody>${conflicts.map(c=>`<tr><td>${esc(c.field||'')}</td><td>${esc(c.value_a||'')}</td><td>${esc(c.value_b||'')}</td></tr>`).join('')}</tbody>
+    </table></div>`;
+  return html;
+}
+
+// ── VCF ────────────────────────────────────────────────────────────────────
+function pageVCF() {
+  return `<div class="page-header"><div class="page-title">Genome Upload</div></div>
+  <div class="upload-area" id="dz" onclick="document.getElementById('vf').click()"
+    ondragover="event.preventDefault();this.classList.add('drag')"
+    ondragleave="this.classList.remove('drag')"
+    ondrop="handleDrop(event)">
+    <div class="upload-label">Drop a VCF file here, or click to select</div>
+    <div class="upload-hint">Supports .vcf &middot; Up to 25 variants annotated via ClinVar</div>
+    <div class="upload-fn" id="vfn"></div>
+  </div>
+  <input type="file" id="vf" accept=".vcf" style="display:none" onchange="handleVCF(this.files[0])"/>
+  <div id="vfr"></div>`;
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dz').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) handleVCF(f);
+}
+
+async function handleVCF(file) {
+  if (!file||!file.name.endsWith('.vcf')) { toast('Please select a .vcf file'); return; }
+  document.getElementById('vfn').textContent = file.name;
+  document.getElementById('vfr').innerHTML = loaderHtml('Parsing variants and annotating with ClinVar...');
+  const fd = new FormData(); fd.append('file', file);
+  try {
+    const r = await fetch('/api/vcf/upload',{method:'POST',body:fd});
+    if (!r.ok) throw new Error(await r.text());
+    document.getElementById('vfr').innerHTML = renderVCF(await r.json());
+  } catch(e) { document.getElementById('vfr').innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+
+function renderVCF(data) {
+  const all=data.all_variants||[],path=data.pathogenic_variants||[];
+  return `<div class="risk-grid">
+    <div class="risk-card r-neutral"><div class="rnum">${data.total_variants||0}</div><div class="rlabel">Total</div></div>
+    <div class="risk-card r-danger"><div class="rnum">${data.pathogenic_count||0}</div><div class="rlabel">Pathogenic</div></div>
+    <div class="risk-card r-warn"><div class="rnum">${data.likely_pathogenic_count||0}</div><div class="rlabel">Likely Path.</div></div>
+    <div class="risk-card r-neutral"><div class="rnum">${data.vus_count||0}</div><div class="rlabel">VUS</div></div>
+  </div>
+  ${path.length?`<div class="section"><div class="section-title">Pathogenic Variants</div>
+    <table class="data-table"><thead><tr><th>Variant</th><th>Gene</th><th>Significance</th><th>Disease</th></tr></thead>
+    <tbody>${path.map(v=>`<tr><td class="td-m td-p">${esc(v.mutation||v.rsid||'')}</td><td class="td-m">${esc(v.gene||'')}</td><td>${sigBadge(v.clinical_significance)}</td><td>${esc(v.associated_disease||'')}</td></tr>`).join('')}</tbody></table></div>`:''}
+  <div class="section"><div class="section-title">All Variants (${all.length})</div>
+    <table class="data-table"><thead><tr><th>Chr</th><th>Position</th><th>rsID</th><th>Ref</th><th>Alt</th><th>Significance</th></tr></thead>
+    <tbody>${all.slice(0,50).map(v=>`<tr>
+      <td class="td-m">${esc(v.chrom||'')}</td>
+      <td class="td-m">${esc(String(v.pos||''))}</td>
+      <td class="td-m">${v.rsid?`<a href="https://www.ncbi.nlm.nih.gov/snp/${v.rsid}" target="_blank">${esc(v.rsid)}</a>`:'—'}</td>
+      <td class="td-m">${esc(v.ref||'')}</td>
+      <td class="td-m">${esc(v.alt||'')}</td>
+      <td>${sigBadge(v.clinical_significance)}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+
+// ── Literature ──────────────────────────────────────────────────────────────
+function pageLiterature() {
+  return `<div class="page-header"><div class="page-title">Literature Search</div></div>
+  <div class="page-search">
+    <input id="li" placeholder="Gene, disease, rsID, or keyword..." onkeydown="if(event.key==='Enter')searchLit()" autocomplete="off"/>
+    <button onclick="searchLit()">Search PubMed</button>
+  </div>
+  <div id="lr"></div>`;
+}
+
+async function searchLit() {
+  const q = document.getElementById('li').value.trim();
+  if (!q) return;
+  document.getElementById('lr').innerHTML = loaderHtml('Searching PubMed...');
+  try {
+    const r = await fetch('/api/pubmed?q='+encodeURIComponent(q));
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    const papers = data.papers || [];
+    document.getElementById('lr').innerHTML = papers.length
+      ? papers.map(p=>`<div style="padding:14px 0;border-bottom:1px solid var(--border)">
+          <a href="${p.pubmed_url||p.url||'#'}" target="_blank" style="font-size:14px;font-weight:500;color:var(--text)">${esc(p.title||'Untitled')}</a>
+          <div style="font-size:11px;color:var(--text2);margin-top:3px">${esc(p.authors||'')} &middot; ${esc(p.journal||'')} &middot; ${esc(p.year||'')}</div>
+          ${p.abstract?`<div style="font-size:13px;color:var(--text2);margin-top:5px;line-height:1.6">${esc(p.abstract.slice(0,300))}${p.abstract.length>300?'&hellip;':''}</div>`:''}
+        </div>`).join('')
+      : '<div style="color:var(--text3);padding:20px 0">No papers found.</div>';
+  } catch(e) { document.getElementById('lr').innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+
+// ── Analyses ────────────────────────────────────────────────────────────────
+function pageAnalyses() {
+  return `<div class="page-header"><div class="page-title">Saved Analyses</div></div>
+  <div id="ab"><div class="inline-loader"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>Loading...</span></div></div>`;
+}
+
+async function loadAnalyses() {
+  try {
+    const r = await fetch('/api/analyses');
+    const data = await r.json();
+    const el = document.getElementById('ab');
+    if (!el) return;
+    const list = data.analyses||[];
+    if (!list.length) { el.innerHTML='<div style="color:var(--text3);padding:16px 0">No saved analyses yet.</div>'; return; }
+    el.innerHTML = `<div class="analyses-list">${list.map(a=>`
+      <div class="an-row" onclick="openAnalysis('${a.id}')">
+        <span class="an-type">${esc(a.type)}</span>
+        <span class="an-name">${esc(a.name||a.query)}</span>
+        <span class="an-date">${(a.created_at||'').slice(0,10)}</span>
+        <button class="an-del" onclick="event.stopPropagation();delAnalysis('${a.id}',this)">Delete</button>
+      </div>`).join('')}</div>`;
+  } catch(e) { const el=document.getElementById('ab'); if(el) el.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+
+async function openAnalysis(id) {
+  // ── Fetch + parse ──────────────────────────────────────────────────────────
+  let row;
+  try {
+    const r = await fetch('/api/analyses/' + id);
+    if (!r.ok) { toast('Analysis not found'); return; }
+    row = await r.json();
+  } catch(e) { toast('Network error: ' + e.message); return; }
+
+  // result may be nested under row.result or directly on row
+  let result = row.result ?? row;
+  if (typeof result === 'string') { try { result = JSON.parse(result); } catch(_) {} }
+
+  // ── Populate state ─────────────────────────────────────────────────────────
+  const query    = result.query   || row.query   || '';
+  const sections = result.sections || [];
+  const answer   = result.answer  || '';
+
+  S.conversation = [];
+  if (query) S.conversation.push({ role: 'user', content: query });
+  S.conversation.push({
+    role:     'assistant',
+    content:  answer,
+    sections,
+    followups:           result.followups  || [],
+    citations:           result.citations  || [],
+    evidence:            result.evidence   || {},
+    query_type:          result.query_type || row.type || 'general',
+    _immediateResponse:  result.immediateResponse || '',
+  });
+
+  S.allCitations = result.citations || [];
+
+  // ── Navigate — forces full rebuild regardless of current page ─────────────
+  navChatFromHistory();
+  updateEP(S.allCitations, true);
+  scrollThreadToBottom();
+}
+
+async function delAnalysis(id, btn) {
+  if (!confirm('Delete this analysis?')) return;
+  await fetch('/api/analyses/'+id,{method:'DELETE'});
+  btn.closest('.an-row').remove();
+  toast('Deleted');
+  loadRecent();
+}
+
+// ── Sidebar recent ──────────────────────────────────────────────────────────
+async function loadRecent() {
+  try {
+    const r = await fetch('/api/analyses?limit=12');
+    const data = await r.json();
+    const el = document.getElementById('recent-list');
+    if (!el) return;
+    const list = data.analyses||[];
+    if (!list.length) { el.innerHTML='<span style="font-size:11px;color:var(--text3);padding:0 8px">No recent searches</span>'; return; }
+    el.innerHTML = list.map(a=>
+      `<div class="recent-item" onclick="openAnalysis('${a.id}')"><span class="recent-type">${a.type}</span>${esc((a.name||a.query).slice(0,30))}</div>`
+    ).join('');
+  } catch(_) {}
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtCitations(text) {
+  if (!text) return '';
+  return renderMarkdown(text);
+}
+
+// ── Table export helpers ─────────────────────────────────────────────────────
+let _tableCounter = 0;
+function _tableToCSV(tableEl) {
+  const rows = [...tableEl.querySelectorAll('tr')];
+  return rows.map(r =>
+    [...r.querySelectorAll('th,td')].map(c => {
+      const v = c.textContent.replace(/"/g, '""');
+      return `"${v}"`;
+    }).join(',')
+  ).join('\n');
+}
+function exportTableCSV(id) {
+  const tbl = document.getElementById(id);
+  if (!tbl) return;
+  const csv = _tableToCSV(tbl);
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'biosage_table.csv';
+  a.click();
+}
+
+// ── Markdown renderer (tables + basic formatting + citations) ─────────────────
+function renderMarkdown(text) {
+  if (!text) return '';
+
+  // Split into blocks on blank lines
+  const lines = text.split('\n');
+  let html = '';
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Detect markdown table: starts with |
+    if (line.trim().startsWith('|')) {
+      const tableLines = [];
+      while (i < lines.length && lines[i].trim().startsWith('|')) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      html += _renderTable(tableLines);
+      continue;
+    }
+
+    // Collect paragraph lines
+    const para = [];
+    while (i < lines.length && lines[i].trim() !== '' && !lines[i].trim().startsWith('|')) {
+      para.push(lines[i]);
+      i++;
+    }
+    if (para.length) {
+      const joined = para.join('\n').trim();
+      if (joined) html += `<p>${_inlineFmt(joined)}</p>`;
+    }
+
+    // Skip blank lines
+    while (i < lines.length && lines[i].trim() === '') i++;
+  }
+
+  return html;
+}
+
+function _renderTable(tableLines) {
+  if (tableLines.length < 2) return `<p>${esc(tableLines.join(' '))}</p>`;
+
+  const parseRow = line =>
+    line.replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+
+  const headers = parseRow(tableLines[0]);
+  // second line is separator (---|---), skip it
+  const dataRows = tableLines.slice(2).map(parseRow);
+
+  const id = `tbl-${++_tableCounter}`;
+
+  let thead = '<thead><tr>' + headers.map(h => `<th>${_inlineFmt(h)}</th>`).join('') + '</tr></thead>';
+  let tbody = '<tbody>' + dataRows.map(row => {
+    const cells = headers.map((_, ci) => `<td>${_inlineFmt(row[ci] ?? '')}</td>`).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('') + '</tbody>';
+
+  return `
+<div class="tbl-wrap">
+  <div class="tbl-toolbar">
+    <span class="tbl-label">${headers.length} columns · ${dataRows.length} rows</span>
+    <button class="tbl-export-btn" onclick="exportTableCSV('${id}')">
+      ↓ Export CSV / Sheets
+    </button>
+  </div>
+  <div class="tbl-scroll">
+    <table id="${id}" class="md-table">${thead}${tbody}</table>
+  </div>
+</div>`;
+}
+
+function _inlineFmt(text) {
+  if (!text) return '';
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    .replace(/\[(\d+)\]/g, '<span class="cite-ref" onclick="scrollCite($1)">$1</span>');
+}
+
+function sigBadge(sig) {
+  if (!sig) return '<span class="sig sig-U">Unknown</span>';
+  const s = sig.toLowerCase();
+  if (s.includes('pathogenic')&&s.includes('likely')) return `<span class="sig sig-LP">Likely Pathogenic</span>`;
+  if (s.includes('pathogenic')) return `<span class="sig sig-P">Pathogenic</span>`;
+  if (s.includes('likely benign')) return `<span class="sig sig-LB">Likely Benign</span>`;
+  if (s.includes('benign')) return `<span class="sig sig-B">Benign</span>`;
+  if (s.includes('uncertain')||s.includes('vus')) return `<span class="sig sig-VUS">VUS</span>`;
+  return `<span class="sig sig-U">${esc(sig)}</span>`;
+}
+
+function phaseBadge(phase) {
+  const p = Math.min(phase||0,4);
+  const labels = {4:'Phase IV',3:'Phase III',2:'Phase II',1:'Phase I',0:'Preclinical'};
+  return `<span class="phase phase-${p}">${labels[p]}</span>`;
+}
+
+function acmgCls(cls) {
+  if (!cls) return '';
+  const c = cls.toLowerCase();
+  if (c.includes('likely pathogenic')) return 'LP';
+  if (c.includes('pathogenic')) return 'P';
+  if (c.includes('likely benign')) return 'LB';
+  if (c.includes('benign')) return 'B';
+  if (c.includes('uncertain')||c.includes('vus')) return 'VUS';
+  return '';
+}
+
+function acmgCritCls(c) {
+  c = c.toLowerCase();
+  if (c.startsWith('pvs')) return 'acmg-pvs';
+  if (c.startsWith('ps')) return 'acmg-ps';
+  if (c.startsWith('pm')) return 'acmg-pm';
+  if (c.startsWith('pp')) return 'acmg-pp';
+  if (c.startsWith('ba')) return 'acmg-ba';
+  if (c.startsWith('bs')) return 'acmg-bs';
+  if (c.startsWith('bp')) return 'acmg-bp';
+  return '';
+}
+
+function vr(key, val) {
+  if (!val && val !== 0) return '';
+  return `<div class="vcard-row"><span class="key">${esc(key)}</span><span class="val">${esc(String(val))}</span></div>`;
+}
+
+function loaderHtml(msg) {
+  return `<div class="inline-loader"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>${msg||'Loading...'}</span></div>`;
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function slugify(s) {
+  return (s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
+
+// ── Progress steps ───────────────────────────────────────────────────────────
+function updateProgress(asstIdx, step) {
+  const steps = ['retrieving', 'analyzing', 'writing'];
+  const stepIdx = steps.indexOf(step);
+  steps.forEach((s, i) => {
+    const el = document.getElementById(`ps-${asstIdx}-${s}`);
+    if (!el) return;
+    el.classList.remove('done', 'active');
+    if (i < stepIdx) el.classList.add('done');
+    else if (i === stepIdx) el.classList.add('active');
+  });
+}
+
+// ── Mobile sidebar toggle ────────────────────────────────────────────────────
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sov');
+  const ham = document.getElementById('ham');
+  if (!sb) return;
+  const open = sb.classList.toggle('open');
+  if (ov) ov.classList.toggle('show', open);
+  if (ham) ham.classList.toggle('open', open);
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+
+// ── Keyboard shortcut: Cmd/Ctrl+K ────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    const hs = document.getElementById('hs');
+    if (hs) { hs.focus(); hs.select(); return; }
+    // Not on home page — go there first
+    if (S.page !== 'home') { nav('home'); setTimeout(() => { const h = document.getElementById('hs'); if (h) { h.focus(); } }, 50); }
+  }
+  if (e.key === 'Escape') {
+    const sb = document.getElementById('sidebar');
+    if (sb && sb.classList.contains('open')) toggleSidebar();
+  }
+});
+
+// ── Copy response to clipboard ───────────────────────────────────────────────
+function copyMsg(idx) {
+  const asst = S.conversation[idx];
+  if (!asst) return;
+  const text = (asst.sections && asst.sections.length)
+    ? asst.sections.map(s => `${s.title}\n${s.content}`).join('\n\n')
+    : (asst.content || '');
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById(`copy-${idx}`);
+    if (!btn) return;
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2200);
+  }).catch(() => toast('Copy failed — check browser permissions'));
+}
+
+// ── Retry / regenerate last assistant response ───────────────────────────────
+function regenMsg(idx) {
+  const userMsg = S.conversation[idx - 1];
+  if (!userMsg || userMsg.role !== 'user' || S.loading) return;
+  // Remove this assistant turn from conversation + DOM
+  S.conversation = S.conversation.slice(0, idx);
+  const msgEl = document.getElementById(`msg-${idx}`);
+  if (msgEl) msgEl.remove();
+  executeQuery(userMsg.content);
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+nav('home');
+loadRecent();
+</script>
+</body>
+</html>
