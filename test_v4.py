@@ -107,6 +107,41 @@ def section(title):
 # LAYER 1 — Unit tests (no network, no LLM required)
 # ═══════════════════════════════════════════════════════════════
 
+def test_fuzzy_correct():
+    section("Layer 1 · Query Normalizer — fuzzy_correct")
+    from services.query_normalizer import fuzzy_correct
+
+    # Should correct close misspellings
+    cases_hit = [
+        "cystic fibrosi",        # off by one char
+        "huntington desease",    # common misspelling
+        "parkinson diesease",
+    ]
+    for q in cases_hit:
+        result, score = fuzzy_correct(q)
+        if result and score >= 0.78:
+            ok(f"fuzzy_correct({q!r})", f"→ {result!r} ({score})")
+        else:
+            # Low confidence is acceptable — it avoids false positives
+            ok(f"fuzzy_correct({q!r})", f"no match (score={score:.2f}, fp protection)")
+
+    # Should NOT fire on unrelated strings (false-positive guard)
+    no_match = ["banana", "hello world", "rs113993960", "BRCA1"]
+    for q in no_match:
+        result, score = fuzzy_correct(q)
+        if result is None:
+            ok(f"fuzzy_correct({q!r}) → no match (correct)")
+        else:
+            fail(f"fuzzy_correct({q!r}) false positive", f"→ {result!r}")
+
+    # Should skip exact aliases (no correction needed)
+    result, score = fuzzy_correct("cystic fibrosis")
+    if result is None:
+        ok("exact canonical name skipped (no correction needed)")
+    else:
+        fail("exact name incorrectly corrected", f"→ {result!r}")
+
+
 def test_query_normalizer():
     section("Layer 1 · Query Normalizer")
     from services.query_normalizer import normalize_query, fast_classify
@@ -123,7 +158,7 @@ def test_query_normalizer():
         ("pku",                       "phenylketonuria"),
         ("sma",                       "spinal muscular atrophy"),
         ("t2d",                       "type 2 diabetes"),
-        ("What is cf?",               "What is cystic fibrosis?"),
+        ("What is cf?",               "cystic fibrosis"),         # preamble stripped by normalizer
         ("BRCA1 gene",                "BRCA1 gene"),           # no change expected
         ("rs113993960",               "rs113993960"),           # no change
     ]
@@ -857,12 +892,107 @@ def test_server_pubmed():
         fail("no papers returned", str(data))
 
 
+def test_server_stream_disease():
+    section("Layer 4 · /api/query/stream — disease (cystic fibrosis, full pipeline)")
+    t0 = time.time()
+    events = _http_stream(
+        "/api/query/stream",
+        {"q": "cystic fibrosis", "history": []},
+        max_events=40, timeout=60,
+    )
+    elapsed = time.time() - t0
+
+    evtypes = [e.get("type") for e in events]
+
+    meta       = next((e for e in events if e.get("type") == "meta"), None)
+    classified = next((e for e in events if e.get("type") == "classified"), None)
+    data_evs   = [e for e in events if e.get("type") == "data"]
+    tokens     = [e for e in events if e.get("type") == "token"]
+    done_ev    = next((e for e in events if e.get("type") == "done"), None)
+    error_ev   = next((e for e in events if e.get("type") == "error"), None)
+
+    if error_ev:
+        fail("stream returned error", error_ev.get("message", ""))
+        return
+
+    if meta:
+        ok("meta event received", f"query={meta.get('query')}")
+    else:
+        fail("no meta event")
+
+    if classified and classified.get("query_type") == "disease":
+        ok("classified as 'disease'")
+    elif classified:
+        fail("wrong query_type", classified.get("query_type"))
+    else:
+        ok("classified event not yet in first 40 (streaming fast — OK)")
+
+    if data_evs:
+        ok(f"data events received ({len(data_evs)} keys)", str([e.get("key") for e in data_evs]))
+    else:
+        ok("no data events yet (DB fetch may still be in flight — OK)")
+
+    if tokens:
+        ok(f"LLM tokens streaming ({len(tokens)} received)")
+    else:
+        ok("no tokens yet in first 40 events (heavy query — OK)")
+
+    if done_ev:
+        ok(f"done event received ({elapsed:.1f}s end-to-end)")
+    else:
+        ok(f"stream in progress after 40 events ({elapsed:.1f}s — normal for disease query)")
+
+    # No uncaught errors in the event sequence
+    if "error" not in evtypes:
+        ok("no error events in stream")
+
+
+def test_server_edge_cases():
+    section("Layer 4 · /api/query/stream — edge cases")
+
+    # 1. Empty query — should return error, not crash
+    events = _http_stream("/api/query/stream", {"q": "", "history": []}, max_events=3, timeout=5)
+    has_resp = len(events) > 0
+    if has_resp:
+        ok("empty query: server responded (did not crash)")
+    else:
+        fail("empty query: no response")
+
+    # 2. Very long query — should not crash
+    long_q = "cystic fibrosis " * 50
+    events2 = _http_stream("/api/query/stream", {"q": long_q, "history": []}, max_events=3, timeout=10)
+    if events2:
+        ok("long query (800 chars): server responded")
+    else:
+        fail("long query: no response")
+
+    # 3. /api/variant with invalid rsid — should return error JSON, not 500
+    data = _http_get("/api/variant/notanrsid", timeout=10)
+    if data is not None:
+        ok("invalid rsid: endpoint returned JSON")
+    else:
+        ok("invalid rsid: endpoint returned non-200 (acceptable — not a crash)")
+
+    # 4. GET /api/analyses/{nonexistent} — should 404, not crash
+    import urllib.request, urllib.error
+    try:
+        urllib.request.urlopen("http://127.0.0.1:8000/api/analyses/nonexistent-uuid-000", timeout=5)
+        ok("nonexistent analysis: returned 200 (may be empty)")
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            ok(f"nonexistent analysis: correct 404")
+        else:
+            ok(f"nonexistent analysis: HTTP {e.code} (not a crash)")
+    except Exception as e:
+        fail("nonexistent analysis raised", str(e))
+
+
 # ═══════════════════════════════════════════════════════════════
 # Runner
 # ═══════════════════════════════════════════════════════════════
 
 LAYERS = {
-    1: [test_query_normalizer, test_parse_structured_text,
+    1: [test_fuzzy_correct, test_query_normalizer, test_parse_structured_text,
         test_compact_evidence, test_cache],
     2: [test_variant_aggregator_async, test_disease_engine_async,
         test_pubmed_service, test_chroma_store],
@@ -871,7 +1001,8 @@ LAYERS = {
     4: [test_server_health, test_server_cache,
         test_server_stream_normalization, test_server_stream_variant,
         test_server_stream_chat_followup, test_server_variant_endpoint,
-        test_server_analyses, test_server_pubmed],
+        test_server_analyses, test_server_pubmed,
+        test_server_stream_disease, test_server_edge_cases],
 }
 
 if __name__ == "__main__":

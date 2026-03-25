@@ -704,10 +704,9 @@ function buildChat() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       closeCiAC();
-      const v = inp.value.trim();
-      // If the input matches a disease name exactly or is ≥3 words, treat as new search
-      const isNewSearch = SUGGESTIONS.some(s => s.toLowerCase() === v.toLowerCase());
-      if (isNewSearch) startQuery(v);
+      const raw = inp.value.trim();
+      const v = raw.startsWith('/new ') ? raw.slice(5).trim() : raw;
+      if (_shouldStartNew(raw)) startQuery(v);
       else sendFollowup(v);
     } else if (e.key === 'Escape') { closeCiAC(); }
   });
@@ -718,10 +717,10 @@ function buildChat() {
   });
   inp.addEventListener('blur', () => setTimeout(closeCiAC, 150));
   btn.addEventListener('click', () => {
-    const v = inp.value.trim();
+    const raw = inp.value.trim();
+    const v = raw.startsWith('/new ') ? raw.slice(5).trim() : raw;
     closeCiAC();
-    const isNewSearch = SUGGESTIONS.some(s => s.toLowerCase() === v.toLowerCase());
-    if (isNewSearch) startQuery(v);
+    if (_shouldStartNew(raw)) startQuery(v);
     else sendFollowup(v);
     inp.value = '';
     inp.style.height = 'auto';
@@ -858,13 +857,13 @@ function _exportDataCSV(ev, id) {
 // Store evidence refs for CSV export
 const _evidenceStore = {};
 
-function renderDataTables(ev) {
+function renderDataTables(ev, idx) {
   let html = '';
   const genes    = ev.genes     || [];
   const variants = ev.variants  || [];
   const drugs    = ev.drugs     || [];
   const pheno    = ev.phenotypes|| [];
-  const storeId  = `ev-${Date.now()}`;
+  const storeId  = `ev-${idx != null ? idx : Date.now()}`;
   _evidenceStore[storeId] = ev;
 
   // ── Visualisations row ──────────────────────────────────────────────────────
@@ -972,6 +971,19 @@ function renderDataTables(ev) {
   return html;
 }
 
+// ── Query routing helper ──────────────────────────────────────────────────
+function _shouldStartNew(q) {
+  // Explicit new-topic if: matches a known disease suggestion, OR no assistant
+  // response exists yet (blank slate conversation), OR user typed /new prefix.
+  if (!q) return false;
+  if (q.startsWith('/new ')) return true;
+  if (SUGGESTIONS.some(s => s.toLowerCase() === q.toLowerCase())) return true;
+  // No prior assistant turn → treat as fresh search
+  const hasAnswer = S.conversation.some(m => m.role === 'assistant' && m.content);
+  if (!hasAnswer) return true;
+  return false;
+}
+
 // ── Query execution (streaming) ────────────────────────────────────────────
 async function startQuery(q) {
   if (!q || S.loading) return;
@@ -1047,6 +1059,9 @@ async function executeQuery(q) {
     const asst = S.conversation[asstIdx];
     asst.content = `Error: ${e.message}`;
     refreshMsg(asstIdx);
+  } finally {
+    // Always clean up loading state, even if stream died without a 'done' event
+    removeLoadingIndicator(asstIdx);
   }
 
   // Finalize
@@ -1197,6 +1212,7 @@ function handleStreamEvent(ev, asstIdx) {
     case 'gene_data':
       asst.evidence = ev.data;
       asst.query_type = 'gene';
+      refreshDataSection(asstIdx);
       break;
     case 'followups':
       asst.followups = (ev.followups || []).map(q => q.replace(/\s*\[\d+\]/g, ''));
@@ -1518,7 +1534,7 @@ function refreshDataSection(idx) {
   const asst = S.conversation[idx];
   const el = document.getElementById(`asst-data-${idx}`);
   if (!el || !asst) return;
-  const html = renderDataTables(asst.evidence || {});
+  const html = renderDataTables(asst.evidence || {}, idx);
   if (html) {
     el.innerHTML = `<div class="msg-data">${html}</div>`;
     removeLoadingIndicator(idx);

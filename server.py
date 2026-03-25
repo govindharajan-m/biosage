@@ -327,7 +327,7 @@ async def stream_query(request: QueryRequest):
                     "query": q, "query_type": "chat",
                     "answer": accumulated,
                     "followups": followups,
-                    "citations": cits if "cits" in dir() else [],
+                    "citations": cits if "cits" in locals() else [],
                 }, workspace)
 
                 yield _sse({"type": "done"})
@@ -508,6 +508,7 @@ async def stream_query(request: QueryRequest):
                     "followups": parsed.get("followups", []),
                     "citations": cits,
                     "evidence":  ev,
+                    "immediate_response": ir_text if ir_future is not None and "ir_text" in locals() else "",
                 }, workspace)
                 query_cache.set(cache_key, cache_events)
 
