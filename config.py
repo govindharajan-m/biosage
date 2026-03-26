@@ -24,6 +24,7 @@ for d in [RAW_DIR / "clinvar", RAW_DIR / "omim", RAW_DIR / "omia",
 NCBI_API_KEY      = os.getenv("NCBI_API_KEY", "")
 NCBI_EMAIL        = os.getenv("NCBI_EMAIL", "")
 OMIM_API_KEY      = os.getenv("OMIM_API_KEY", "")
+DISGENET_API_KEY  = os.getenv("DISGENET_API_KEY", "")   # optional — get free key at disgenet.org
 
 # ── NCBI E-utilities base URL ─────────────────────────────────────────────────
 NCBI_BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"

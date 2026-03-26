@@ -12,7 +12,7 @@ from typing import Optional
 
 import requests
 
-from config import NCBI_API_KEY, NCBI_BASE, REQUEST_TIMEOUT
+from config import DISGENET_API_KEY, NCBI_API_KEY, NCBI_BASE, REQUEST_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -198,11 +198,30 @@ class DiseaseEngine:
     # ── DisGeNET ────────────────────────────────────────────────────────────
 
     def get_associations_disgenet(self, disease_name: str) -> list:
-        """Query DisGeNET for gene-disease associations (public API)."""
-        data = _get(
-            "https://www.disgenet.org/api/gda/disease/search",
-            {"disease_name": disease_name, "source": "ALL", "format": "json", "limit": 20},
-        )
+        """Query DisGeNET for gene-disease associations.
+
+        DisGeNET REST API requires an API key since 2024.
+        If DISGENET_API_KEY is not set, this method skips silently —
+        Open Targets already covers the gene-association gap.
+        """
+        if not DISGENET_API_KEY:
+            logger.debug("DisGeNET skipped — DISGENET_API_KEY not set")
+            return []
+
+        headers = {**_HEADERS, "Authorization": f"Bearer {DISGENET_API_KEY}"}
+        try:
+            r = requests.get(
+                "https://www.disgenet.org/api/gda/disease/search",
+                params={"disease_name": disease_name, "source": "ALL", "format": "json", "limit": 20},
+                headers=headers,
+                timeout=REQUEST_TIMEOUT,
+            )
+            r.raise_for_status()
+            data = r.json()
+        except Exception as e:
+            logger.debug("DisGeNET request failed: %s", e)
+            return []
+
         if not data or not isinstance(data, list):
             return []
         results = []
