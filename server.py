@@ -178,6 +178,7 @@ class QueryRequest(BaseModel):
     workspace_id: Optional[str] = DEFAULT_WORKSPACE_ID
     save: Optional[bool] = False
     bandwidth: Optional[str] = "high"   # "low" | "high"
+    mode: Optional[str] = "research"    # "research" | "clinical" | "quick"
 
 
 class SaveAnalysisRequest(BaseModel):
@@ -216,7 +217,7 @@ async def health():
         stats = workspace_stats(DEFAULT_WORKSPACE_ID)
     except Exception:
         stats = {}
-    return {"status": "ok", "version": "4.0.0", "workspace_stats": stats}
+    return {"status": "ok", "version": "4.1.0", "workspace_stats": stats}
 
 
 # ── SSE helper ────────────────────────────────────────────────────────────────
@@ -267,6 +268,9 @@ async def stream_query(request: QueryRequest):
     loop        = asyncio.get_running_loop()
     has_history = bool(history)
     low_bw      = (request.bandwidth or "high") == "low"
+    mode        = (request.mode or "research").lower()
+    if mode not in ("research", "clinical", "quick"):
+        mode = "research"
 
     # ── Async bridge: sync generator → async generator ────────────────────────
     async def _bridge(gen_fn, *args):
@@ -294,7 +298,7 @@ async def stream_query(request: QueryRequest):
         nonlocal q
         try:
             # ── Cache check ───────────────────────────────────────────────────
-            cache_key = query_cache.make_key("qs4", q, "h" if has_history else "", "lo" if low_bw else "")
+            cache_key = query_cache.make_key("qs4", q, "h" if has_history else "", "lo" if low_bw else "", mode)
             cached    = query_cache.get(cache_key)
             if cached:
                 logger.info("Cache hit: '%s'", q[:50])
@@ -469,12 +473,12 @@ async def stream_query(request: QueryRequest):
                 # Kick off Immediate Response in parallel (skipped in low-bandwidth mode)
                 ir_future = (
                     None if low_bw
-                    else loop.run_in_executor(None, rag.generate_immediate_response_sync, q)
+                    else loop.run_in_executor(None, rag.generate_immediate_response_sync, q, mode)
                 )
 
                 # Stream LLM synthesis (starts immediately — DB results already sent)
                 accumulated = ""
-                async for token_ev in _bridge(rag.stream_synthesis_sync, ev, low_bw):
+                async for token_ev in _bridge(rag.stream_synthesis_sync, ev, low_bw, mode):
                     if token_ev["type"] == "token":
                         accumulated += token_ev["text"]
                     yield _sse(token_ev)
@@ -503,7 +507,7 @@ async def stream_query(request: QueryRequest):
 
                 # Auto-save and cache
                 loop.run_in_executor(None, _bg_save, q, "disease", {
-                    "query": q, "query_type": "disease",
+                    "query": q, "query_type": "disease", "mode": mode,
                     "sections":  parsed.get("sections", []),
                     "followups": parsed.get("followups", []),
                     "citations": cits,

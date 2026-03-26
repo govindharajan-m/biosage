@@ -112,6 +112,113 @@ Make each question specific — use actual gene names, disease names, or drug na
 Query: {query}
 Answer summary (first 400 chars): {summary}"""
 
+# ── Mode-specific streaming synthesis prompts ─────────────────────────────────
+# Each prompt defines the exact ##SECTION: structure for that mode.
+# Immediate Response is emitted separately (always last) — do NOT include it here.
+
+_SYNTHESIS_PROMPTS = {
+
+"research": """\
+You are BioSage, a biomedical research intelligence platform. Generate a rigorous, \
+citation-dense research report using EXACTLY this section structure:
+
+##SECTION: Overview
+[2-3 sentences. Lead with the most striking genetic, molecular, or epidemiological fact. \
+Never open with "[Disease] is a condition/disease/disorder…".]
+
+##SECTION: Biological Mechanism
+[Explain the core molecular and cellular dysfunction. Describe protein function, \
+loss-of-function effects, downstream signalling. Every sentence must carry [N] citations.]
+
+##SECTION: Molecular Basis
+[Named genes with association scores/evidence strength, key pathogenic variants (HGVS notation \
+where available), inheritance pattern, penetrance. Cite [N] for each claim.]
+
+##SECTION: Systems-Level Effects
+[How the primary molecular defect propagates to tissues, organs, and physiological systems. \
+Include pathway names (e.g., Reactome IDs if available). Cite [N] for each.]
+
+##SECTION: Clinical Relevance
+[Major phenotypes, diagnostic criteria, disease severity spectrum, age of onset, \
+prevalence/incidence statistics. Cite [N] for each claim.]
+
+##SECTION: Research Insights
+[Current therapeutic targets, approved drugs with clinical phase, emerging pipeline, \
+open research questions. Cite [N] for each claim.]
+
+##FOLLOWUPS:
+[Exactly 4 specific scientific follow-up questions. Use real gene/drug/pathway names. \
+One per line. No numbering. No leading symbols.]
+
+RULES:
+- Every factual sentence must contain at least one [N] citation (N from evidence numbers)
+- If a section has no evidence, write: Insufficient evidence available for this section.
+- No emojis. No asterisks. No markdown except the ##SECTION: / ##FOLLOWUPS: markers.
+- Be scientifically precise and research-grade. Write for a postdoc or clinician-scientist.
+
+EVIDENCE:
+{evidence}""",
+
+"clinical": """\
+You are BioSage, a clinical biomedical assistant. Generate a clinician-focused report \
+using EXACTLY this section structure:
+
+##SECTION: Overview
+[2-3 sentences covering disease definition, prevalence, and primary affected population. \
+Lead with the most clinically important fact. Cite [N].]
+
+##SECTION: Clinical Presentation
+[Key signs and symptoms, phenotypic variability, disease onset and progression. \
+Include HPO terms where available. Cite [N] for each.]
+
+##SECTION: Diagnostic Criteria
+[Diagnostic approach, gold-standard tests, genetic testing recommendations, \
+differential diagnoses. Cite [N] for each criterion.]
+
+##SECTION: Treatment & Management
+[Approved therapies with clinical phase/approval status, molecular targets, \
+supportive care guidelines, monitoring recommendations. Cite [N] for each.]
+
+##SECTION: Clinical Outlook
+[Prognosis, quality-of-life considerations, major unmet clinical needs, \
+ongoing trials if available. Cite [N].]
+
+##FOLLOWUPS:
+[Exactly 4 clinically-focused follow-up questions. Use real drug/gene/phenotype names. \
+One per line. No numbering.]
+
+RULES:
+- Every factual sentence must contain at least one [N] citation
+- If a section has no evidence, write: Insufficient evidence available for this section.
+- No emojis, no asterisks, no markdown except ##SECTION: / ##FOLLOWUPS: markers
+- Tone: precise clinical language suitable for a physician or advanced practice clinician
+
+EVIDENCE:
+{evidence}""",
+
+"quick": """\
+You are BioSage. Generate a concise, accessible biomedical summary using EXACTLY this structure:
+
+##SECTION: Key Facts
+[3-5 sentences covering: what the disease is, primary gene(s) involved, how it is inherited, \
+and how common it is. Plain scientific language. Cite [N] for each fact.]
+
+##SECTION: What You Need to Know
+[3-5 sentences covering: main symptoms, available treatments, and prognosis. \
+Focus on practical clinical relevance. Cite [N] for each.]
+
+##FOLLOWUPS:
+[Exactly 2 concise follow-up questions for deeper exploration. One per line. No numbering.]
+
+RULES:
+- Every factual sentence must contain at least one [N] citation
+- No emojis, no asterisks, no markdown except ##SECTION: / ##FOLLOWUPS: markers
+- Be clear and concise — accessible to an educated non-specialist
+
+EVIDENCE:
+{evidence}""",
+}
+
 
 class RAGEngine:
     """
@@ -473,12 +580,14 @@ class RAGEngine:
 
     # ── Mode 2b: Streaming disease report ─────────────────────────────────────
 
-    def stream_synthesis_sync(self, evidence: dict, low_bandwidth: bool = False):
+    def stream_synthesis_sync(self, evidence: dict, low_bandwidth: bool = False,
+                              mode: str = "research"):
         """
         Sync generator — streams a structured disease report token by token.
         Uses ##SECTION: / ##FOLLOWUPS: markers for client-side parsing.
 
-        low_bandwidth=True returns a compact 3-section report (~600 tokens).
+        mode: "research" (default) | "clinical" | "quick"
+        low_bandwidth=True overrides mode to "quick" and caps tokens at 600.
 
         Yields: {"type": "token", "text": str}
         Final:  {"type": "llm_done"}
@@ -491,71 +600,17 @@ class RAGEngine:
         compact       = self._compact_evidence(evidence)
         evidence_json = json.dumps(compact, ensure_ascii=False)
 
+        # Low-bandwidth overrides to quick mode with smaller evidence window
         if low_bandwidth:
-            system = f"""You are BioSage generating a concise biomedical summary.
-Use EXACTLY this format:
-
-##SECTION: Disease Overview
-[2 sentences max with [N] citation markers]
-
-##SECTION: Key Points
-[3-4 bullet points covering genetics, symptoms, and treatment]
-
-##SECTION: Treatment Approaches
-[1-2 sentences on main treatments with [N] citations]
-
-##FOLLOWUPS:
-[2 specific follow-up questions, one per line]
-
-RULES:
-- Be extremely concise — low-bandwidth mode
-- Every sentence must include at least one [N] citation
-- No emojis, no asterisks, no markdown except ##SECTION / ##FOLLOWUPS markers
-- NEVER open with "[Disease] is a condition..." — lead with the most striking fact
-
-EVIDENCE:
-{evidence_json[:1800]}"""
+            mode    = "quick"
             max_tok = 600
+            ev_trim = evidence_json[:1800]
         else:
-            system = f"""You are BioSage generating a biomedical research report.
-Use EXACTLY this format — no other text outside these markers:
+            mode    = mode if mode in _SYNTHESIS_PROMPTS else "research"
+            max_tok = {"research": 1800, "clinical": 1400, "quick": 700}[mode]
+            ev_trim = evidence_json[:3500]
 
-##SECTION: Disease Overview
-[2-3 sentences with [N] citation markers]
-
-##SECTION: Genetic Basis
-[Key genes, functions, association scores with [N] citations]
-
-##SECTION: Pathogenic Variants
-[Most significant mutations and clinical significance with [N] citations]
-
-##SECTION: Biological Pathways
-[Disrupted pathways with [N] citations]
-
-##SECTION: Clinical Features
-[Major symptoms and phenotypes with [N] citations]
-
-##SECTION: Treatment Approaches
-[Known drugs, clinical phases, molecular targets with [N] citations]
-
-##FOLLOWUPS:
-[Exactly 4 specific follow-up questions, one per line, no numbering]
-
-RULES:
-- Every factual sentence must include at least one [N] citation (N from evidence numbers)
-- If a section has no evidence write: Insufficient evidence available.
-- No emojis, no asterisks, no markdown except ##SECTION / ##FOLLOWUPS markers
-- Be concise and scientifically precise
-- NEVER open the Disease Overview with "[Disease] is a condition..." or "[Disease] is a disease..."
-  Instead open with the most clinically or genetically striking fact — for example:
-  "Caused by...", "Affecting roughly X people...", "First described by...",
-  "Mutations in [gene] underlie...", "A hallmark of [disease] is...",
-  "Driven by...", "The primary defect in [disease] lies in..."
-- Write in an engaging, direct scientific voice — not a dry encyclopaedia entry
-
-EVIDENCE:
-{evidence_json[:3500]}"""
-            max_tok = 1800
+        system = _SYNTHESIS_PROMPTS[mode].format(evidence=ev_trim)
 
         try:
             stream = self.client.chat.completions.create(
@@ -581,11 +636,12 @@ EVIDENCE:
 
     # ── Immediate Response (fast parallel call) ───────────────────────────────
 
-    def generate_immediate_response_sync(self, disease_name: str) -> str:
+    def generate_immediate_response_sync(self, disease_name: str,
+                                          mode: str = "research") -> str:
         """
         Fast, non-streaming LLM call executed in parallel with main retrieval.
-        Returns bullet-point general first-response guidance.
-        Deliberately avoids specific medications or dosages.
+        Returns bullet-point general first-response guidance (always safe/non-prescriptive).
+        Placed at the END of the response regardless of mode.
         """
         if not self.client:
             return ""

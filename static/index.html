@@ -375,6 +375,42 @@ body.low-data .immediate-response-section{border-color:rgba(16,185,129,0.15);bac
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}
 }
+
+/* ── Mode selector ──────────────────────────────────────────────────────── */
+.mode-selector{display:flex;gap:4px;margin-bottom:20px}
+.mode-btn{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);transition:all 0.14s;font-family:inherit}
+.mode-btn:hover{border-color:var(--border2);color:var(--text)}
+.mode-btn.active[data-mode=research]{background:rgba(59,130,246,0.12);border-color:rgba(59,130,246,0.4);color:#60A5FA}
+.mode-btn.active[data-mode=clinical]{background:rgba(34,197,94,0.12);border-color:rgba(34,197,94,0.4);color:#4ADE80}
+.mode-btn.active[data-mode=quick]{background:rgba(234,179,8,0.12);border-color:rgba(234,179,8,0.4);color:#FACC15}
+.mode-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:0.3px;text-transform:uppercase;margin-left:6px}
+.mode-chip.research{background:rgba(59,130,246,0.12);color:#60A5FA;border:1px solid rgba(59,130,246,0.25)}
+.mode-chip.clinical{background:rgba(34,197,94,0.12);color:#4ADE80;border:1px solid rgba(34,197,94,0.25)}
+.mode-chip.quick{background:rgba(234,179,8,0.12);color:#FACC15;border:1px solid rgba(234,179,8,0.25)}
+
+/* ── PDF / print ────────────────────────────────────────────────────────── */
+.pdf-btn{font-size:11px;padding:3px 9px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface2);color:var(--text3);cursor:pointer;transition:all 0.12s;font-family:inherit;margin-left:4px}
+.pdf-btn:hover{border-color:var(--accent-border);color:var(--accent)}
+
+@media print{
+  body{background:#fff!important;color:#111!important;font-size:11pt;line-height:1.6}
+  .layout{display:block!important}
+  .sidebar,.evidence-panel,.chat-bar,.hamburger,.sidebar-overlay,.msg-actions,.followup-chips,.pdf-btn,.new-chat-btn,.example-queries,.home-sources,.low-data-toggle,.bw-indicator,.mode-selector,.nav-item,.ep-header,.ep-body,.ep-show-more,.cached-badge,.chat-hint{display:none!important}
+  .main,.main-inner{width:100%!important;overflow:visible!important;height:auto!important;padding:0!important}
+  .chat-thread{overflow:visible!important;height:auto!important;padding:0!important}
+  .msg{margin-bottom:1.2em;page-break-inside:avoid}
+  .msg-header{border-bottom:1px solid #ddd;padding-bottom:4px;margin-bottom:8px}
+  .msg-role.assistant,.msg-type-tag,.mode-chip{color:#1a1a2e!important;background:none!important;border:none!important}
+  .report-section{margin-bottom:12pt;page-break-inside:avoid}
+  .report-section-title{font-weight:700;font-size:11pt;margin-bottom:4pt;border-bottom:1px solid #eee;padding-bottom:2pt}
+  .report-section-body{font-size:10pt;color:#222}
+  .msg-user-bubble{background:#f3f4f6!important;color:#111!important;border:1px solid #ddd!important;padding:8pt 12pt!important}
+  .immediate-response-section{border:1px solid #ccc!important;background:#f9fafb!important;padding:10pt!important}
+  .ir-list li{color:#222!important}
+  a[href]::after{content:" (" attr(href) ")";font-size:8pt;color:#666}
+  .print-header{display:block!important;font-size:9pt;color:#666;text-align:right;margin-bottom:12pt;border-bottom:1px solid #ddd;padding-bottom:6pt}
+}
+.print-header{display:none}
 </style>
 </head>
 <body>
@@ -389,7 +425,7 @@ body.low-data .immediate-response-section{border-color:rgba(16,185,129,0.15);bac
   <nav class="sidebar" id="sidebar">
     <div class="sidebar-brand">
       <div class="brand-name">BioSage</div>
-      <div class="brand-sub">Biomedical Intelligence</div>
+      <div class="brand-sub">Biomedical Research Platform</div>
     </div>
     <div class="sidebar-nav">
       <div class="nav-item active" data-page="home" onclick="nav('home')"><span class="nav-dot"></span>Research</div>
@@ -468,6 +504,7 @@ const S = {
   allCitations: [],  // full citation list for lazy loading
   shownCitations: 0,
   lowData: false,    // Low Data Mode flag
+  mode: 'research',  // "research" | "clinical" | "quick"
 };
 
 // ── Adaptive bandwidth detection ──────────────────────────────────────────
@@ -507,6 +544,27 @@ function toggleLowData() {
   if (label) label.textContent = isLow ? 'Low Data: ON' : 'Low Data Mode';
   const el = document.getElementById('bw-indicator');
   if (el) el.textContent = isLow ? 'Manual override' : '';
+}
+
+// ── Mode selector ──────────────────────────────────────────────────────────
+function setMode(m) {
+  S.mode = m;
+  // Update all mode buttons on screen
+  document.querySelectorAll('.mode-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === m);
+  });
+  // Update chat-bar mode chip if visible
+  const chip = document.getElementById('chat-mode-chip');
+  if (chip) {
+    chip.className = `mode-chip ${m}`;
+    chip.textContent = m;
+  }
+}
+
+function cycleChatMode() {
+  const modes = ['research', 'clinical', 'quick'];
+  const next  = modes[(modes.indexOf(S.mode) + 1) % modes.length];
+  setMode(next);
 }
 
 // ── Stream parser state (per query) ───────────────────────────────────────
@@ -570,8 +628,13 @@ function buildHome() {
   const wrap = document.createElement('div');
   wrap.className = 'home-wrap';
   wrap.innerHTML = `
-    <div class="home-title">Biomedical Research</div>
-    <div class="home-sub">Ask any question about diseases, genes, variants, or pathways.<br>Every answer is grounded in primary biomedical databases with inline citations.</div>
+    <div class="home-title">Biomedical Research Platform</div>
+    <div class="home-sub">Research-grade answers on diseases, genes, variants, and pathways — grounded in primary databases with inline citations.</div>
+    <div class="mode-selector" id="mode-sel">
+      <button class="mode-btn ${S.mode==='research'?'active':''}" data-mode="research" onclick="setMode('research')">Research</button>
+      <button class="mode-btn ${S.mode==='clinical'?'active':''}" data-mode="clinical" onclick="setMode('clinical')">Clinical</button>
+      <button class="mode-btn ${S.mode==='quick'?'active':''}" data-mode="quick" onclick="setMode('quick')">Quick</button>
+    </div>
     <div class="search-wrap" id="sw">
       <input class="search-input" id="hs" placeholder="e.g. cystic fibrosis, rs113993960, BRCA1 gene..." autocomplete="off" spellcheck="false"/>
       <button class="search-btn" id="hbtn">Search</button>
@@ -669,7 +732,9 @@ function buildChat() {
       <button class="chat-send" id="cs" ${S.loading ? 'disabled' : ''}>Send</button>
     </div>
     <div class="chat-hint">
-      <span class="chat-hint-text">Enter to send &middot; Shift+Enter for new line</span>
+      <span class="chat-hint-text">Enter to send &middot; Shift+Enter for new line &middot;
+        <span id="chat-mode-chip" class="mode-chip ${S.mode}" style="cursor:pointer" onclick="cycleChatMode()" title="Click to change mode">${S.mode}</span>
+      </span>
       <button class="new-chat-btn" onclick="newChat()">New conversation</button>
     </div>`;
 
@@ -778,14 +843,19 @@ function renderMsg(msg, idx) {
     ).join('')}</div>`;
   }
 
+  const modeLabel = msg._mode || '';
+  const modeChipHtml = modeLabel ? `<span class="mode-chip ${modeLabel}">${modeLabel}</span>` : '';
   return `<div class="msg" id="msg-${idx}">
+    <div class="print-header">BioSage Biomedical Research Platform &mdash; ${new Date().toLocaleDateString()}</div>
     <div class="msg-header">
       <span class="msg-role assistant">BioSage</span>
       <span class="msg-type-tag">${typeLabel}</span>
+      ${modeChipHtml}
       ${cachedBadge}
       <div class="msg-actions">
         <button class="msg-act-btn" id="copy-${idx}" onclick="copyMsg(${idx})">Copy</button>
         <button class="msg-act-btn" onclick="regenMsg(${idx})">Retry</button>
+        <button class="pdf-btn" onclick="exportMsgPDF(${idx})" title="Export as PDF">PDF</button>
       </div>
     </div>
     ${inner}
@@ -1020,7 +1090,7 @@ async function executeQuery(q) {
 
   // Add assistant placeholder
   const asstIdx = S.conversation.length;
-  S.conversation.push({ role: 'assistant', content: '', sections: [], followups: [], citations: [], evidence: {}, query_type: 'general' });
+  S.conversation.push({ role: 'assistant', content: '', sections: [], followups: [], citations: [], evidence: {}, query_type: 'general', _mode: S.mode || 'research' });
   appendMsgToThread(buildLoadingMsg(asstIdx));
 
   const history = buildHistory();
@@ -1032,7 +1102,7 @@ async function executeQuery(q) {
     const resp = await fetch('/api/query/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q, history, bandwidth: S.lowData ? 'low' : 'high' }),
+      body: JSON.stringify({ q, history, bandwidth: S.lowData ? 'low' : 'high', mode: S.mode || 'research' }),
     });
 
     if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
@@ -2165,6 +2235,29 @@ function copyMsg(idx) {
     btn.classList.add('copied');
     setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2200);
   }).catch(() => toast('Copy failed — check browser permissions'));
+}
+
+// ── PDF export — print a single response ─────────────────────────────────────
+function exportMsgPDF(idx) {
+  const msgEl = document.getElementById(`msg-${idx}`);
+  if (!msgEl) return;
+
+  // Temporarily hide everything except this message
+  const thread = document.getElementById('chat-thread');
+  if (!thread) { window.print(); return; }
+
+  const others = Array.from(thread.querySelectorAll('.msg')).filter(el => el.id !== `msg-${idx}`);
+  others.forEach(el => el.style.display = 'none');
+
+  // Ensure print-header is visible just for this print
+  const hdr = msgEl.querySelector('.print-header');
+  if (hdr) hdr.style.display = 'block';
+
+  window.print();
+
+  // Restore
+  others.forEach(el => el.style.display = '');
+  if (hdr) hdr.style.display = '';
 }
 
 // ── Retry / regenerate last assistant response ───────────────────────────────

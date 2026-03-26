@@ -142,6 +142,41 @@ def test_fuzzy_correct():
         fail("exact name incorrectly corrected", f"→ {result!r}")
 
 
+def test_synthesis_prompts():
+    section("Layer 1 · Synthesis prompts (mode coverage)")
+    from rag_engine import _SYNTHESIS_PROMPTS
+
+    for mode in ("research", "clinical", "quick"):
+        prompt = _SYNTHESIS_PROMPTS.get(mode, "")
+        has_section_marker = "##SECTION:" in prompt
+        has_followup_marker = "##FOLLOWUPS:" in prompt
+        has_evidence_placeholder = "{evidence}" in prompt
+
+        (ok if has_section_marker  else fail)(f"{mode}: has ##SECTION: markers")
+        (ok if has_followup_marker else fail)(f"{mode}: has ##FOLLOWUPS: marker")
+        (ok if has_evidence_placeholder else fail)(f"{mode}: has {{evidence}} placeholder")
+
+    # research must have all 6 required sections
+    r = _SYNTHESIS_PROMPTS["research"]
+    required_sections = ["Overview", "Biological Mechanism", "Molecular Basis",
+                         "Systems-Level Effects", "Clinical Relevance", "Research Insights"]
+    for sec in required_sections:
+        (ok if sec in r else fail)(f"research prompt contains '{sec}' section")
+
+    # clinical must mention treatment
+    c = _SYNTHESIS_PROMPTS["clinical"]
+    if "Treatment" in c:
+        ok("clinical prompt contains Treatment section")
+    else:
+        fail("clinical prompt missing Treatment section")
+
+    # quick must be shorter than research (conciseness guarantee)
+    if len(_SYNTHESIS_PROMPTS["quick"]) < len(_SYNTHESIS_PROMPTS["research"]):
+        ok("quick prompt is shorter than research prompt")
+    else:
+        fail("quick prompt should be more concise than research prompt")
+
+
 def test_query_normalizer():
     section("Layer 1 · Query Normalizer")
     from services.query_normalizer import normalize_query, fast_classify
@@ -708,7 +743,7 @@ def test_server_health():
         if data:
             break
         _time.sleep(3)
-    if data and data.get("version") == "4.0.0":
+    if data and data.get("version") in ("4.0.0", "4.1.0"):
         ok("health endpoint", f"v{data['version']}")
     elif data:
         fail("version mismatch", f"got {data.get('version')}")
@@ -947,6 +982,33 @@ def test_server_stream_disease():
         ok("no error events in stream")
 
 
+def test_server_mode_parameter():
+    section("Layer 4 · /api/query/stream — mode parameter (normalization + meta)")
+    for mode in ("research", "clinical", "quick", "invalid_mode"):
+        events = _http_stream(
+            "/api/query/stream",
+            {"q": "cf", "history": [], "mode": mode},
+            max_events=3, timeout=10,
+        )
+        has_resp = len(events) > 0
+        if has_resp:
+            ok(f"mode={mode!r}: server accepted and responded")
+        else:
+            fail(f"mode={mode!r}: no response")
+
+    # Verify 'invalid_mode' falls back to 'research' without crashing
+    events2 = _http_stream(
+        "/api/query/stream",
+        {"q": "cystic fibrosis", "history": [], "mode": "nonsense"},
+        max_events=3, timeout=10,
+    )
+    err = next((e for e in events2 if e.get("type") == "error" and "mode" in e.get("message", "").lower()), None)
+    if not err:
+        ok("invalid mode falls back gracefully (no mode-related error event)")
+    else:
+        fail("invalid mode raised unexpected error", str(err))
+
+
 def test_server_edge_cases():
     section("Layer 4 · /api/query/stream — edge cases")
 
@@ -992,8 +1054,8 @@ def test_server_edge_cases():
 # ═══════════════════════════════════════════════════════════════
 
 LAYERS = {
-    1: [test_fuzzy_correct, test_query_normalizer, test_parse_structured_text,
-        test_compact_evidence, test_cache],
+    1: [test_synthesis_prompts, test_fuzzy_correct, test_query_normalizer,
+        test_parse_structured_text, test_compact_evidence, test_cache],
     2: [test_variant_aggregator_async, test_disease_engine_async,
         test_pubmed_service, test_chroma_store],
     3: [test_rag_stream_chat, test_rag_classify,
@@ -1002,7 +1064,8 @@ LAYERS = {
         test_server_stream_normalization, test_server_stream_variant,
         test_server_stream_chat_followup, test_server_variant_endpoint,
         test_server_analyses, test_server_pubmed,
-        test_server_stream_disease, test_server_edge_cases],
+        test_server_stream_disease, test_server_mode_parameter,
+        test_server_edge_cases],
 }
 
 if __name__ == "__main__":
