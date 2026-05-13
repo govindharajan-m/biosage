@@ -1,4 +1,4 @@
-# DiseaseLLM 
+# BIOSAGE 
 
 ### AI-Powered Genomic Intelligence — B2C SaaS for Disease & Variant Interpretation
 
