@@ -1,4 +1,4 @@
-# DiseaseLLM 🧬
+# DiseaseLLM 
 
 ### AI-Powered Genomic Intelligence — B2C SaaS for Disease & Variant Interpretation
 
@@ -6,7 +6,7 @@
 
 ---
 
-## 🚀 What It Does
+##  What It Does
 
 DiseaseLLM is a **text-based AI assistant** that lets any user ask natural-language questions about diseases, genetic variants, and clinical significance — and get structured, citation-backed answers in seconds.
 
@@ -20,7 +20,7 @@ Under the hood, it combines:
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -43,7 +43,7 @@ Under the hood, it combines:
 
 ---
 
-## ✨ Key Features
+## Key Features
 
 | Feature | Description |
 |---------|-------------|
@@ -56,7 +56,7 @@ Under the hood, it combines:
 
 ---
 
-## 🛠️ Tech Stack
+## Stack
 
 | Layer | Technology |
 |-------|------------|
@@ -70,7 +70,7 @@ Under the hood, it combines:
 
 ---
 
-## ⚡ Quick Start
+## Quick Start
 
 ```bash
 # 1. Clone the repo
@@ -95,14 +95,14 @@ python server.py
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GROQ_API_KEY` | ✅ | Groq API key for LLM inference |
+| `GROQ_API_KEY` | Groq API key for LLM inference |
 | `NCBI_API_KEY` | Recommended | Increases NCBI rate limit (3 → 10 req/s) |
 | `NCBI_EMAIL` | Recommended | Required by NCBI for API access |
 | `OMIM_API_KEY` | For OMIM data | OMIM API access |
 
 ---
 
-## 📈 Scalability & Roadmap
+##  Scalability & Roadmap
 
 DiseaseLLM is architected with **horizontal scalability** in mind. The modular, service-oriented backend is designed for a clear migration path from MVP to production-grade SaaS:
 
@@ -145,7 +145,7 @@ DiseaseLLM is architected with **horizontal scalability** in mind. The modular, 
 
 ---
 
-## 🧬 How It Works
+##  How It Works
 
 ### RAG Pipeline
 1. **Ingest** — Fetchers pull data from 6+ open-source genomic databases
@@ -156,12 +156,6 @@ DiseaseLLM is architected with **horizontal scalability** in mind. The modular, 
 
 ### ACMG Classification
 Implements the full **ACMG/AMP 2015 variant interpretation guidelines** — evaluating 28 evidence criteria (PVS1, PS1–PS4, PM1–PM6, PP1–PP5, BA1, BS1–BS4, BP1–BP7) and applying combination rules to classify variants as Pathogenic, Likely Pathogenic, VUS, Likely Benign, or Benign.
-
----
-
-## 📄 License
-
-MIT
 
 ---
 
