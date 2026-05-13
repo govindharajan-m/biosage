@@ -8,7 +8,7 @@
 
 ##  What It Does
 
-DiseaseLLM is a **text-based AI assistant** that lets any user ask natural-language questions about diseases, genetic variants, and clinical significance — and get structured, citation-backed answers in seconds.
+BIOSAGE is a **text-based AI assistant** that lets any user ask natural-language questions about diseases, genetic variants, and clinical significance — and get structured, citation-backed answers in seconds.
 
 Under the hood, it combines:
 
