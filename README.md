@@ -117,7 +117,7 @@ DiseaseLLM is architected with **horizontal scalability** in mind. The modular, 
 
 ---
 
-## 📡 API Reference
+## API Reference
 
 ### Core Analysis
 
