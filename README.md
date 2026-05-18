@@ -1,4 +1,4 @@
-# BIOSAGE 
+# BIOSAGE (IN DEVELOPMENT)
 
 ### AI-Powered Genomic Intelligence — B2C SaaS for Disease & Variant Interpretation
 
